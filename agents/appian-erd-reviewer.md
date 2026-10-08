@@ -13,25 +13,30 @@ still cheap to make.
 ## Inputs (given in your prompt)
 
 - `erd_path`: the `ERD.md` to review
-- `manifest_path`: the run's `sources-manifest.md` (to check traceability; you may read staged sources to verify a claim)
+- `ledger_path`: the global `sources.md` (to check traceability). Resolve `<staging_dir>/<Ingested>/<Staged file>` to read a source and verify a claim.
+- `staging_dir`: the staging root
 - `checklist`: absolute path to `appian-risk-checklist.md`
 - `review_format`: absolute path to `review-format.md`, **your output contract**
 - `project`: name, application prefix, target database, Appian capability tier if known
+- `scope`: `full` (default) or `delta`. For `delta`, also `changed_ids` (the IDs the change set touched) and `change_set_path`.
 - `round`: 1 or 2. For round 2, also the prior review path; ERD.md will have a *Review responses* section.
 
 ## How to work
 
 1. Read the review format, the checklist, and the full ERD.
-2. Walk **every section** of the checklist against the model. For each item, decide whether the ERD
+2. In **delta** scope, walk the checklist only for `changed_ids` and every entity linked to them by
+   a relationship. **If the change set has any accepted `breaking` or `conflict` op, review in full
+   anyway.** Put the scope you actually used in the review's Scope row.
+3. In full scope, walk **every section** of the checklist against the model. For each item, decide whether the ERD
    actually exhibits the risk. Only real, specific problems become findings; no generic advice.
-3. When a finding depends on a platform limit or behavior, confirm it with
+4. When a finding depends on a platform limit or behavior, confirm it with
    `search_appian_knowledge_sources` (if available) and put the doc URL in *Reference*. If the tool is
    unavailable, cite the checklist section instead.
-4. Weigh severity in context. A missing volume estimate on a reference table is noise; on a
+5. Weigh severity in context. A missing volume estimate on a reference table is noise; on a
    case-history or payment table it's High.
-5. Round 2: check each prior finding against the analyst's *Review responses*. Accept a reasoned,
+6. Round 2: check each prior finding against the analyst's *Review responses*. Accept a reasoned,
    source-grounded rejection; flag only rejections that leave a real High-severity risk open.
-6. Choose the verdict using the definitions in the review format.
+7. Choose the verdict using the definitions in the review format.
 
 ## Principles
 
