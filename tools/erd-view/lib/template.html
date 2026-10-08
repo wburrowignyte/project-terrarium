@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:">
 <title>ERD Viewer</title>
 <style>
 :root{--bg:#f6f7f9;--panel:#fff;--text:#1c2430;--muted:#657084;--border:#d6dbe3;--accent:#2563eb;--node:#fff;--node-border:#9aa5b5;--edge:#7b8698;--hl:#f59e0b;--match:#fde68a;
@@ -579,9 +580,17 @@ function download(blob, name) { const a = document.createElement('a'); a.href = 
 const base = (MODEL.title || 'erd').replace(/[^\w-]+/g, '_').slice(0, 60);
 $('#exsvg').onclick = () => download(new Blob([serialize().xml], { type: 'image/svg+xml' }), base + '.svg');
 $('#expng').onclick = () => {
-  const { xml, w, h } = serialize(), sc = Math.min(2, 16000 / Math.max(w, h)), img = new Image();
-  img.onload = () => { const c = document.createElement('canvas'); c.width = Math.round(w * sc); c.height = Math.round(h * sc); const x = c.getContext('2d'); x.scale(sc, sc); x.drawImage(img, 0, 0); c.toBlob((b) => download(b, base + '.png')); };
-  img.onerror = () => alert('PNG export failed (diagram too large for the browser). Use SVG export.');
+  const { xml, w, h } = serialize(), MAXPX = 100e6;
+  const sc = Math.min(2, 16000 / Math.max(w, h), Math.sqrt(MAXPX / (w * h))), img = new Image();
+  const fail = () => alert('PNG export failed (diagram too large for the browser). Use SVG export.');
+  img.onload = () => {
+    try {
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * sc)); c.height = Math.max(1, Math.round(h * sc));
+      const x = c.getContext('2d'); x.scale(sc, sc); x.drawImage(img, 0, 0);
+      c.toBlob((b) => (b ? download(b, base + '.png') : fail()));
+    } catch { fail(); }
+  };
+  img.onerror = fail;
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
 };
 

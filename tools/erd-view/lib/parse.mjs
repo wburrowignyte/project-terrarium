@@ -14,7 +14,13 @@ function sections(md, level) {
 }
 
 function parseTable(text) {
-  const lines = text.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('|'));
+  // Only the first contiguous block of table lines; a later table in the same section is ignored.
+  const all = text.split('\n').map((l) => l.trim());
+  const start = all.findIndex((l) => l.startsWith('|'));
+  if (start === -1) return [];
+  let end = start;
+  while (end < all.length && all[end].startsWith('|')) end++;
+  const lines = all.slice(start, end);
   if (lines.length < 2) return [];
   const cells = (l) => l.replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\\|/g, '|'));
   const head = cells(lines[0]);
@@ -136,28 +142,34 @@ export function parseErd(md) {
   for (const [table, me] of mm.entities) {
     let e = byTable.get(table);
     if (!e) {
-      e = { id: `E-${++next}`, name: table, table, purpose: '', kind: '', volume: '', sensitivity: '', sources: '', fields: [], fromMermaidOnly: true };
+      e = { id: `E-${++next}`, name: table, table, purpose: '', kind: '', volume: '', sensitivity: '', sources: '', deprecated: '', fields: [], fromMermaidOnly: true };
       byTable.set(table, e); byId.set(e.id, e); model.entities.push(e);
       warnings.push(`${table}: only in Mermaid block (no Entities section)`);
     }
     if (!e.fields.length) e.fields = me.fields.map((f) => ({ field: '', column: f.column, type: f.type, req: false, key: f.key, description: '', sources: '' }));
   }
-  const have = new Set(model.relationships.map((r) => [byId.get(r.from)?.table, byId.get(r.to)?.table].sort().join('|')));
+  const pairSig = (x) => [byId.get(x.from)?.table, byId.get(x.to)?.table].sort().join('|');
+  const claimed = new Set(); // table relationships already matched to a Mermaid edge
   for (const r of mm.relationships) {
     const A = byTable.get(r.a), B = byTable.get(r.b);
     const sig = [A.table, B.table].sort().join('|');
     const l = endCard(r.left, 'left'), rt = endCard(r.right, 'right');
-    // label: attach to existing table-derived relationship if any
-    const existing = model.relationships.find((x) => [byId.get(x.from)?.table, byId.get(x.to)?.table].sort().join('|') === sig && !x.label);
-    if (existing) { existing.label = r.label; continue; }
-    if (have.has(sig)) continue;
+    const siblings = model.relationships.filter((x) => pairSig(x) === sig);
+    // Mermaid edges carry only a label, so parallel edges between one pair are matched in document order.
+    const target = siblings.find((x) => !claimed.has(x));
+    if (target) { claimed.add(target); target.label = r.label; continue; }
+    if (siblings.length) {
+      warnings.push(`Mermaid has more edges between ${A.table} and ${B.table} (${siblings.length + 1}+) than the Relationships table (${siblings.length}); extra "${r.label}" edge ignored`);
+      continue;
+    }
     // Child (many) side is the "from".
     let from = A, to = B, card;
     if (l.many && rt.many) card = 'many-to-many';
     else if (l.many) { from = A; to = B; card = 'many-to-one'; }
     else if (rt.many) { from = B; to = A; card = 'many-to-one'; }
     else card = 'one-to-one';
-    model.relationships.push({ id: `R-m${model.relationships.length + 1}`, from: from.id, to: to.id, cardinality: card, fk: '', description: '', sources: '', label: r.label });
+    const added = { id: `R-m${model.relationships.length + 1}`, from: from.id, to: to.id, cardinality: card, fk: '', description: '', sources: '', label: r.label, deprecated: false };
+    model.relationships.push(added); claimed.add(added);
     warnings.push(`Relationship ${A.table} -> ${B.table} only in Mermaid block`);
   }
 

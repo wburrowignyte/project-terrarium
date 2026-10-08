@@ -26,7 +26,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   let input, out, open = false, json = false;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a === '-o' || a === '--out') out = args[++i];
+    if (a === '-o' || a === '--out') { out = args[++i]; if (!out || out.startsWith('-')) { console.error(`${a} needs a path\n${USAGE}`); process.exit(2); } }
     else if (a === '--open') open = true;
     else if (a === '--json') json = true;
     else if (a === '-h' || a === '--help') { console.log(USAGE); process.exit(0); }
@@ -37,10 +37,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   if (!existsSync(input)) { console.error(`File not found: ${input}`); process.exit(2); }
   const { model, html } = render(readFileSync(input, 'utf8'));
   if (!model.entities.length) { console.error(`No entities found in ${input}. Expected "### E-n Name (\`TABLE\`)" sections or a mermaid erDiagram block.`); process.exit(1); }
+  for (const w of model.warnings) console.error(`warning: ${w}`);
   if (json) { console.log(JSON.stringify(model, null, 2)); process.exit(0); }
   const dest = resolve(out ?? join(dirname(input), basename(input).replace(/\.md$/i, '') + '.html'));
   writeFileSync(dest, html);
-  for (const w of model.warnings) console.error(`warning: ${w}`);
   console.log(`${dest}\n${model.entities.length} entities, ${model.relationships.length} relationships, ${(html.length / 1024).toFixed(0)} KB`);
   if (open) spawn(process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'cmd' : 'xdg-open', process.platform === 'win32' ? ['/c', 'start', '', dest] : [dest], { stdio: 'ignore', detached: true }).unref();
 }

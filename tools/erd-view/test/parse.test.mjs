@@ -1,4 +1,8 @@
 import { test } from 'node:test';
+import { mkdtempSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -86,4 +90,106 @@ test('baseline fixture (maintained ERD) parses completely', () => {
   assert.equal(m.entities.length, 14);
   assert.equal(m.relationships.length, 18);
   assert.deepEqual(m.warnings, []);
+});
+
+const mini = (rels, mermaid) => `# T
+
+## Diagram
+
+\`\`\`mermaid
+erDiagram
+${mermaid}
+\`\`\`
+
+## Entities
+
+### E-1 User (\`U\`)
+- **Kind:** Core
+
+| Field | Column | Type | Req | Key | Description | Sources |
+|---|---|---|---|---|---|---|
+| id | ID | Integer | Y | PK | k | CONVENTION |
+
+| Index | Cols |
+|---|---|
+| ix | ID |
+
+### E-2 Doc (\`D\`)
+- **Kind:** Core
+
+| Field | Column | Type | Req | Key | Description | Sources |
+|---|---|---|---|---|---|---|
+| id | ID | Integer | Y | PK | k | CONVENTION |
+| submitterId | SUBMITTER_ID | Integer | Y | FK→E-1 | s | CONVENTION |
+| reviewerId | REVIEWER_ID | Integer | N | FK→E-1 | r | CONVENTION |
+| parentId | PARENT_ID | Integer | N | FK→E-2 | p | CONVENTION |
+
+## Relationships
+
+| ID | From | To | Cardinality | FK field | Description | Sources |
+|---|---|---|---|---|---|---|
+${rels}
+`;
+
+test('parallel relationships between one pair each keep their own label', () => {
+  const m = parseErd(mini(
+    '| R-1 | E-2 Doc | E-1 User | many-to-one | submitterId | | |\n| R-2 | E-2 Doc | E-1 User | many-to-one | reviewerId | | |',
+    '  U ||--o{ D : "submitted by"\n  U ||--o{ D : "reviewed by"'));
+  assert.deepEqual(m.relationships.map((r) => r.label), ['submitted by', 'reviewed by']);
+  assert.deepEqual(m.warnings, []);
+});
+
+test('extra Mermaid edges for a pair are reported, not silently dropped', () => {
+  const m = parseErd(mini('| R-1 | E-2 Doc | E-1 User | many-to-one | submitterId | | |', '  U ||--o{ D : "a"\n  U ||--o{ D : "b"'));
+  assert.equal(m.relationships.length, 1);
+  assert.ok(m.warnings.some((w) => w.includes('extra "b" edge ignored')));
+});
+
+test('self-referencing relationship parses', () => {
+  const m = parseErd(mini('| R-1 | E-2 Doc | E-2 Doc | many-to-one | parentId | | |', '  D ||--o{ D : "parent of"'));
+  assert.equal(m.relationships[0].from, 'E-2');
+  assert.equal(m.relationships[0].to, 'E-2');
+  assert.equal(m.relationships[0].label, 'parent of');
+});
+
+test('a second table in an entity section is not merged into its fields', () => {
+  const m = parseErd(mini('', ''));
+  assert.deepEqual(m.entities.find((e) => e.id === 'E-1').fields.map((f) => f.column), ['ID']);
+});
+
+test('Mermaid-only entities have the same shape as table entities', () => {
+  const m = parseErd('# T\n\n```mermaid\nerDiagram\n  A {\n    int ID PK\n  }\n```\n');
+  assert.equal(m.entities[0].deprecated, '');
+});
+
+test('generated HTML: inline scripts parse and a CSP is present', () => {
+  const { html } = render(fixture);
+  assert.match(html, /Content-Security-Policy[^>]*default-src 'none'/);
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+  assert.equal(scripts.length, 2);
+  for (const src of scripts) assert.doesNotThrow(() => new Function(src));
+});
+
+const cli = fileURLToPath(new URL('../erd-view.mjs', import.meta.url));
+const fixturePath = fileURLToPath(new URL('../../../examples/fixtures/flawed-ERD.md', import.meta.url));
+
+test('CLI: -o writes to the given path', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'erdview-'));
+  const out = join(dir, 'x.html');
+  const r = spawnSync(process.execPath, [cli, fixturePath, '-o', out], { encoding: 'utf8' });
+  assert.equal(r.status, 0);
+  assert.ok(existsSync(out));
+});
+
+test('CLI: -o without a value is an error', () => {
+  const r = spawnSync(process.execPath, [cli, fixturePath, '-o'], { encoding: 'utf8' });
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /needs a path/);
+});
+
+test('CLI: --json prints the model on stdout and warnings on stderr', () => {
+  const r = spawnSync(process.execPath, [cli, fixturePath, '--json'], { encoding: 'utf8' });
+  assert.equal(r.status, 0);
+  assert.equal(JSON.parse(r.stdout).entities.length, 9);
+  assert.match(r.stderr, /warning: R-7/);
 });
