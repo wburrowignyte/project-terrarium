@@ -44,7 +44,7 @@ td.mono,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;f
 .badge.PII,.badge.PHI,.badge.FTI,.badge.CJI{background:var(--warn);color:#fff;border-color:transparent}
 #detail h2{font-size:16px;margin:0 0 2px}#detail .sub{color:var(--muted);margin-bottom:8px}
 #detail dl{display:grid;grid-template-columns:90px 1fr;gap:3px 8px;margin:8px 0}#detail dt{color:var(--muted)}#detail dd{margin:0}
-#detail td,#detail th{padding:3px 6px;font-size:12px}
+#detail{width:400px;overflow-x:hidden}#detail table{table-layout:fixed;word-break:break-word}#detail td,#detail th{padding:3px 6px;font-size:12px}#detail .rt td:nth-child(1){width:48px}#detail .rt td:nth-child(2){width:64px}
 .link{color:var(--accent);cursor:pointer;text-decoration:none}.link:hover{text-decoration:underline}
 .warnlist li{margin:4px 0}.empty{color:var(--muted)}
 @media print{header,#filters,#detail,.toolbar,#mini,#status{display:none!important}svg#svg{height:100vh}}
@@ -64,6 +64,8 @@ td.mono,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;f
     <h3>Sensitivity</h3><div id="sens"></div>
     <h3>Fields shown</h3>
     <select id="fieldmode"><option value="keys">Key fields only</option><option value="all">All fields</option><option value="none">Names only</option></select>
+    <h3>Relationship lines</h3>
+    <select id="edgemode"><option value="all">Always show all</option><option value="selected">Only for selected / matched</option></select>
     <h3>Focus</h3>
     <select id="hops"><option value="1">Selected + 1 hop</option><option value="2">Selected + 2 hops</option><option value="3">Selected + 3 hops</option></select>
     <div style="margin-top:6px;display:flex;gap:6px"><button class="btn" id="focusbtn">Focus selected</button><button class="btn" id="showall">Show all</button></div>
@@ -108,11 +110,12 @@ const sensOf = (e) => { const m = (e.sensitivity || '').match(/PHI|PII|FTI|CJI/g
 const SENS = ['PHI', 'PII', 'FTI', 'CJI'];
 
 /* ---------- state ---------- */
-const state = { kinds: new Set(), sens: new Set(), fieldMode: ents.length > 40 ? 'keys' : 'all', selected: null, focus: null, matches: new Set(), showIsolated: true, showDeprecated: true, tx: 0, ty: 0, k: 1 };
+const state = { kinds: new Set(), sens: new Set(), fieldMode: ents.length > 40 ? 'keys' : 'all', selected: null, focus: null, matches: new Set(), showIsolated: true, showDeprecated: true, edgeMode: rels.length > 80 ? 'selected' : 'all', tx: 0, ty: 0, k: 1 };
 const allKinds = [...new Set(ents.map(kindOf))];
 allKinds.forEach((k) => state.kinds.add(k));
 SENS.concat(['None']).forEach((s) => state.sens.add(s));
-$('#fieldmode').value = state.fieldMode;
+$('#fieldmode').value = state.fieldMode; $('#edgemode').value = state.edgeMode;
+$('#edgemode').addEventListener('change', (e) => { state.edgeMode = e.target.value; restyle(); });
 
 /* ---------- header / pages ---------- */
 document.title = MODEL.title + ' — ERD viewer';
@@ -404,7 +407,10 @@ function restyle() {
   for (const o of scene.edgeEls) {
     const hit = sel && (o.e.from === sel || o.e.to === sel);
     const on = sel ? hit : true;
-    o.g.setAttribute('opacity', sel ? (hit ? 1 : 0.06) : hasMatch ? 0.25 : 0.55);
+    const matched = hasMatch && (state.matches.has(o.e.from) || state.matches.has(o.e.to));
+    const hideAll = state.edgeMode === 'selected' && !sel && !matched;
+    o.g.setAttribute('display', hideAll ? 'none' : '');
+    o.g.setAttribute('opacity', sel ? (hit ? 1 : 0.06) : hasMatch ? (matched ? 0.9 : 0.1) : 0.55);
     o.line.setAttribute('stroke', hit ? css('--hl') : css('--edge')); o.line.setAttribute('stroke-width', hit ? 2.2 : 1.3);
     o.m.setAttribute('stroke', hit ? css('--hl') : css('--edge'));
     o.lbl.setAttribute('display', hit ? '' : 'none');
@@ -485,14 +491,14 @@ function renderDetail() {
   const e = byId.get(id), sens = sensOf(e);
   const rl = relsOf.get(id).map((r) => {
     const out = r.from === id, o = byId.get(out ? r.to : r.from);
-    return `<tr><td class="mono">${esc(r.id)}</td><td>${out ? 'many-to-one →' : '← one-to-many'}${r.cardinality === 'one-to-one' ? ' (1:1)' : r.cardinality === 'many-to-many' ? ' (M:N)' : ''}</td><td><span class="link" data-go="${o.id}">${esc(o.table)}</span></td><td class="mono">${esc(r.fk)}</td></tr>${r.description ? `<tr><td></td><td colspan="3" style="color:var(--muted)">${esc(r.description)}</td></tr>` : ''}`;
+    return `<tr><td class="mono">${esc(r.id)}</td><td>${r.cardinality === 'one-to-one' ? '1:1' : r.cardinality === 'many-to-many' ? 'M:N' : out ? 'N:1 →' : '← 1:N'}</td><td><span class="link" data-go="${o.id}">${esc(o.table)}</span></td><td class="mono">${esc(r.fk)}</td></tr>${r.description ? `<tr><td></td><td colspan="3" style="color:var(--muted)">${esc(r.description)}</td></tr>` : ''}`;
   }).join('');
   d.innerHTML = `<h2>${esc(e.name)}</h2><div class="sub mono">${esc(e.table)} · ${esc(e.id)}</div>
   ${sens.map((s) => `<span class="badge ${s}">${s}</span>`).join(' ')}
   ${e.deprecated ? `<p><span class="badge" style="background:var(--warn);color:#fff">DEPRECATED</span> ${esc(e.deprecated.replace(/^deprecated\s*/i, ''))}</p>` : ''}
   <p>${esc(e.purpose)}</p>
   <dl><dt>Kind</dt><dd>${esc(e.kind || '—')}</dd><dt>Volume</dt><dd>${esc(e.volume || '—')}</dd><dt>Sensitivity</dt><dd>${esc(e.sensitivity || '—')}</dd><dt>Sources</dt><dd>${esc(e.sources || '—')}</dd></dl>
-  <h3>Relationships (${relsOf.get(id).length})</h3>${rl ? `<table>${rl}</table>` : '<p class="empty">None.</p>'}
+  <h3>Relationships (${relsOf.get(id).length})</h3>${rl ? `<table class="rt">${rl}</table>` : '<p class="empty">None.</p>'}
   <h3>Fields (${e.fields.length})</h3>
   <table><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Description</th></tr></thead><tbody>${e.fields.map((f) => `<tr><td class="mono">${esc(f.column)}${f.req ? ' *' : ''}</td><td class="mono">${esc(f.type)}</td><td class="mono">${esc(f.key)}</td><td>${esc(f.description)}${f.sources ? `<div style="color:var(--muted)">${esc(f.sources)}</div>` : ''}</td></tr>`).join('')}</tbody></table>
   <p style="color:var(--muted)">* required</p>`;
