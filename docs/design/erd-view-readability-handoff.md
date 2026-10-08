@@ -247,4 +247,78 @@ so **a connector never crosses a table**.
 ---
 
 ## Implementation notes
-(Builder: record decisions, deviations and screenshot links here.)
+
+Built on `dev`. Everything in sections 2 to 7 is in, with the deviations and choices below.
+
+### Commits
+Contract, agents and config went in as the suggested first commit. The parser, layout module, template and tests are one
+commit instead of two, because the render tests exercise the template and the layout module together and each half is
+red without the other.
+
+### Decisions the spec left open
+- **Change sets.** No new op. A Group change on an existing entity is `rename` with Target `E-n.group` (class
+  `breaking`); `add-entity` names its Group. Recorded in `changeset-format.md`.
+- **Group with no `Group` bullet** when `## Groups` exists: warning `entity X: no Group`, and the entity lands in a
+  trailing `Other` group. A `Group` bullet with no `## Groups` section: one warning, and groups are ordered by first
+  appearance.
+- **Mermaid fallback.** A `"LOOKUP: <TYPE>"` comment on an attribute sets `lookupType` when the field comes from the
+  Mermaid block only.
+- **Derived groups** use one breadth-first walk from all seeds at once, so a hub does not swallow the model; Core entities
+  in a Core-only cycle seed the next group in ID order. On hub-and-spoke models the result is still uneven (the 84-entity
+  test ERD gives a 27-table and a 16-table group next to several one-table groups). It is a notice, not a warning.
+- **One `kindOf`.** `parse.mjs` imports `kindOf` from `layout.mjs`, which the template inlines, so there is one
+  definition (an entity flagged `isLookup` is `Lookup` whatever its Kind says).
+
+### Deviations from the spec
+1. **Ports for a lower parent.** The spec says to connect the parent at its top when it is in the same or a lower row.
+   Taken literally the child also leaves from its top and the line climbs around to come back down. I used child bottom to
+   parent top, which is what every Core-to-Reference line is. Same row and adjacent columns use the facing sides; same row
+   and not adjacent use top to top, as specified.
+2. **Line jumps are small square bumps, not gaps.** A gap needs a second `M` in the path, and the spec requires
+   `^M[\d.,-]+(L[\d.,-]+)+$`. `pts` keeps the clean route (tests run on it); `d` carries the bumps.
+3. **`Compact (auto)` goes through the same engine.** Each connected component is one group and the longest-path layer is the
+   tier (same layering and barycentre code as before). The old shelf-packed `layout()` is gone, which is what lets both modes
+   share the router. Focus on 6 or fewer tables switches to it automatically.
+4. **Gutter growth is capped.** The spec grows a gutter by 10 px per lane without limit; on the 84-entity ERD that made the
+   diagram about 3,300 by 4,000 px, unreadable when fitted. Gutters grow by `maxLanes` (6) lanes, then lanes squeeze together
+   (never closer than 3.5 px). Constants moved into options: `base`, `maxLanes`, `laneMin`, `maxCols`.
+5. **Connectors hidden by default means lazy routing.** Above 80 relationships (and when *Only for selected / matched* is
+   chosen) the grid is laid out with tight gutters and nothing is routed. Selecting or matching a table routes just its
+   lines into the existing gutters (`out.reroute(ids)`), spread evenly inside each gutter. The cost: when one gutter must
+   carry more than about 20 selected lines (a hub such as `DHS_CASE` with 51), neighbouring lines can sit under 1 px apart
+   and merge. Routing with all connectors visible has no such limit, and a randomized stress run (480 layouts; a trimmed version is in
+   `layout.test.mjs`) found no diagonal, no table crossing and no shared stretch there.
+6. **Band width adapts.** `BAND_BUDGET` 2600 is only the default; `layoutBest` tries 1600 to 5400 px and keeps whichever
+   fits the viewport at the largest scale.
+7. **Group headers sit above the connectors** (with a halo), so a stub never strikes through a group name.
+8. **Export matches the screen.** The old export un-hid every hidden element, including all edge labels; it now keeps what is
+   on screen and only restores field rows hidden by zoom level.
+9. **Vertical lane positions.** Ports sit on whole pixels (even for bottom ports, odd for top ports) and vertical lanes sit
+   on a per-band fraction (.25/.5/.75). The randomized run found same-x collisions between stubs and between adjacent
+   bands without this.
+
+### Fit scale
+On the 84-entity test ERD, fitted in a 1250 by 720 window: old layout 0.52, Compact (auto) about 0.47, Grouped about 0.44.
+The grouped grid is inherently sparser (aligned tiers, frames, headers). Names-only boxes stay readable by zooming
+a little or by the Group filter; Compact (auto) is there for the densest view.
+
+### Tests
+`node --test "tools/erd-view/test/*.test.mjs"`: 34 pass. `layout.test.mjs` covers every item in section 5, plus the lazy
+`reroute` path and, when Playwright and Chromium are installed, the rendered viewer (edge `d` values are M/L only in both
+layouts, four frames, LK markers, no page errors); that test skips itself otherwise. `parse.test.mjs` is unchanged.
+`claude plugin validate .` passes. Plugin version is now 0.4.0, and the ERD view module row in the README is v0.2.
+
+### Screenshots (`docs/design/erd-view-readability/`)
+Connectors are forced on in all of them so the routing can be checked by eye.
+
+| Model | Light, all fields | Light, names only | Dark, all fields | Dark, names only |
+|---|---|---|---|---|
+| Grouped fixture (17 tables, 4 groups) | [png](erd-view-readability/grouped-light-all-fields.png) | [png](erd-view-readability/grouped-light-names-only.png) | [png](erd-view-readability/grouped-dark-all-fields.png) | [png](erd-view-readability/grouped-dark-names-only.png) |
+| Baseline (14 tables, groups inferred) | [png](erd-view-readability/baseline-light-all-fields.png) | [png](erd-view-readability/baseline-light-names-only.png) | [png](erd-view-readability/baseline-dark-all-fields.png) | [png](erd-view-readability/baseline-dark-names-only.png) |
+| Synthetic 150 tables, 13 groups | [png](erd-view-readability/large-150-light-all-fields.png) | [png](erd-view-readability/large-150-light-names-only.png) | [png](erd-view-readability/large-150-dark-all-fields.png) | [png](erd-view-readability/large-150-dark-names-only.png) |
+
+### Known limits
+- A connector between groups in different bands can have up to ten segments, and where it crosses a group frame it
+  also crosses the frame's border.
+- With all connectors on, a 150-table model with 258 relationships is a dense bundle; that is why the default hides them.
+- Derived groups on hub-and-spoke models are uneven (see above). Adding `## Groups` fixes it.

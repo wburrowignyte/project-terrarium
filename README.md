@@ -10,7 +10,7 @@ and receives the outputs.
 |---|---|---|
 | ERD build | `/project-terrarium:erd-build` | v0.2 |
 | ERD maintain | `/project-terrarium:erd-maintain` | v0.2 |
-| ERD view (ERD.md to interactive HTML) | `/project-terrarium:erd-view` | v0.1 |
+| ERD view (ERD.md to interactive HTML) | `/project-terrarium:erd-view` | v0.2 |
 
 Status is the module's own version; the plugin version is in `.claude-plugin/plugin.json`.
 
@@ -63,7 +63,18 @@ nothing is deleted (retired items are marked deprecated). If nothing is new, the
 
 Large ERDs don't render well as a Mermaid block. `tools/erd-view/` turns `ERD.md` into one self-contained
 HTML file (no network, no dependencies, Node 18+) with pan/zoom, minimap, search by entity or column,
-filters by kind and sensitivity, an N-hop focus mode, a detail panel with fields and citations, and SVG/PNG export.
+filters by kind, group and sensitivity, an N-hop focus mode, a detail panel with fields and citations, and SVG/PNG export.
+
+- **Grouped layout (default).** Tables sit in labelled group frames, left to right in the `## Groups` order, with Core
+  tables on top and Junction, Reference and History/Audit tables below them. ERDs without `## Groups` are grouped
+  automatically from their relationships (the warnings tab says so). *Compact (auto)* in the Layout dropdown gives
+  the denser layered layout instead.
+- **Elbow connectors.** Straight horizontal and vertical segments in the gutters between tables, never through a
+  table, with a small hop where two cross.
+- **Shared lookup.** `<PREFIX>_LOOKUP` gets no connector lines. Each field that points at it carries an amber `LK`
+  chip and its `LOOKUP_TYPE`; selecting the lookup table highlights every table that uses it.
+- On models with more than 80 relationships the connectors show for the selected table only, which keeps the
+  diagram compact.
 
 ```bash
 node tools/erd-view/erd-view.mjs path/to/erd/ERD.md        # writes path/to/erd/ERD.html

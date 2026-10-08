@@ -34,6 +34,13 @@ Arguments: `$ARGUMENTS` (optional path to the ERD; empty means the project's ERD
 - `ERD.html` is git-ignored: it embeds the ERD text, which may describe PII/PHI fields.
 - The viewer reads the Entities and Relationships tables (richer than Mermaid) and falls back to the
   Mermaid block for anything the tables don't cover.
-- Viewer tips to relay if asked: `/` searches, click selects an entity and highlights its neighbors,
-  double-click zooms to it, *Focus selected* shows only an entity's N-hop neighborhood, hiding Reference
-  tables in the Kind filter removes most clutter on large models.
+- Viewer tips to relay if asked: `/` searches (a `LOOKUP_TYPE` name finds every table that uses it), click
+  selects an entity and highlights its neighbors, double-click zooms to it, *Focus selected* shows only an
+  entity's N-hop neighborhood, hiding Reference tables in the Kind filter or unticking groups in the Group filter
+  removes clutter on large models.
+- Tables are drawn in group frames in the `## Groups` order, Core on top. If the viewer's header shows
+  *groups inferred*, the ERD has no `## Groups` section: the grouping is a guess from the relationships, and the
+  warnings tab says how to fix it (an `erd-analyst` revise run adds Groups).
+- The shared `<PREFIX>_LOOKUP` table has no connector lines by design. Selecting it highlights the tables that
+  reference it, and each referencing field shows an amber `LK` chip.
+- *Layout* offers *Grouped* (default) and *Compact (auto)*, a denser layered layout with no group frames.

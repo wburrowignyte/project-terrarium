@@ -1,6 +1,6 @@
 {
   "name": "project-terrarium",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Project maintenance for software delivery engagements. Build an Appian-ready ERD from Teams transcripts, project context MD files, and SharePoint docs, have an Appian architect review it for structural risk, and incrementally maintain it from new meetings and slide decks through reviewable change sets. Render the ERD as an interactive HTML diagram.",
   "author": {
     "name": "Ignyte Group"
