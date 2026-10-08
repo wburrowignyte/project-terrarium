@@ -9,6 +9,7 @@ and receives the outputs.
 | Module | Command | Status |
 |---|---|---|
 | ERD build | `/project-terrarium:erd-build` | v0.1 |
+| ERD view (ERD.md to interactive HTML) | `/project-terrarium:erd-view` | v0.1 |
 | ERD maintain (diff new meetings against the ERD) | — | planned |
 
 ## ERD build workflow
@@ -37,6 +38,20 @@ The reviewer works from [appian-risk-checklist.md](skills/erd-build/references/a
 All Microsoft 365 access is read-only. Raw source text is staged under `.project-terrarium/staging/`,
 which is git-ignored because DHS transcripts may contain PII/PHI. Every ERD element cites its source
 (`[S2 @00:14:32]`), which is what makes the planned maintenance module possible.
+
+## ERD viewer
+
+Large ERDs don't render well as a Mermaid block. `tools/erd-view/` turns `ERD.md` into one self-contained
+HTML file (no network, no dependencies, Node 18+) with pan/zoom, minimap, search by entity or column,
+filters by kind and sensitivity, an N-hop focus mode, a detail panel with fields and citations, and SVG/PNG export.
+
+```bash
+node tools/erd-view/erd-view.mjs path/to/erd/ERD.md        # writes path/to/erd/ERD.html
+node tools/erd-view/erd-view.mjs ERD.md -o out.html --open
+```
+
+Or run `/project-terrarium:erd-view`. `ERD.html` is git-ignored because it embeds the ERD text.
+Tests: `node --test "tools/erd-view/test/*.test.mjs"`.
 
 ## Install (in the project repo)
 
