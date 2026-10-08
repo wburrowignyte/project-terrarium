@@ -110,7 +110,7 @@ const sensOf = (e) => { const m = (e.sensitivity || '').match(/PHI|PII|FTI|CJI/g
 const SENS = ['PHI', 'PII', 'FTI', 'CJI'];
 
 /* ---------- state ---------- */
-const state = { kinds: new Set(), sens: new Set(), fieldMode: ents.length > 40 ? 'keys' : 'all', selected: null, focus: null, matches: new Set(), showIsolated: true, showDeprecated: true, edgeMode: rels.length > 80 ? 'selected' : 'all', tx: 0, ty: 0, k: 1 };
+const state = { kinds: new Set(), sens: new Set(), fieldMode: ents.length > 40 ? 'none' : 'all', selected: null, focus: null, matches: new Set(), showIsolated: true, showDeprecated: true, edgeMode: rels.length > 80 ? 'selected' : 'all', tx: 0, ty: 0, k: 1 };
 const allKinds = [...new Set(ents.map(kindOf))];
 allKinds.forEach((k) => state.kinds.add(k));
 SENS.concat(['None']).forEach((s) => state.sens.add(s));
@@ -189,7 +189,24 @@ function fieldRows(e) {
   rows = rows.slice(0, MAXROWS);
   return { rows, more };
 }
+const commonPrefix = (() => {
+  const c = new Map(); ents.forEach((e) => { const t = e.table.split('_'); if (t.length > 1) c.set(t[0], (c.get(t[0]) || 0) + 1); });
+  const [tok, n] = [...c.entries()].sort((a, b) => b[1] - a[1])[0] || [];
+  return tok && n >= ents.length * 0.7 ? tok + '_' : '';
+})();
+function nameLines(e) {
+  const name = commonPrefix && e.table.startsWith(commonPrefix) ? e.table.slice(commonPrefix.length) : e.table;
+  const lines = []; let cur = '';
+  for (const t of name.split('_')) { if (cur && (cur + '_' + t).length > 15) { lines.push(cur + '_'); cur = t; } else cur = cur ? cur + '_' + t : t; }
+  lines.push(cur); return lines;
+}
+const F_NAME = '700 14px system-ui,sans-serif', LINE = 18;
 function sizeNode(e) {
+  if (state.fieldMode === 'none') {
+    const lines = nameLines(e), sn = sensOf(e);
+    const w = Math.ceil(Math.max(...lines.map((l) => measure(l, F_NAME))) + 26 + (sn.length ? 4 : 0));
+    return { w: Math.max(w, 90), h: 14 + lines.length * LINE + (sn.length ? 16 : 0), rows: [], more: 0, lines };
+  }
   const { rows, more } = fieldRows(e);
   const sn = sensOf(e);
   let w = measure(e.table, F_TITLE) + 28 + (sn.length ? 16 + sn.join('/').length * 6 : 0);
@@ -216,7 +233,7 @@ function layout(nodes, edges) {
   for (const comp of comps) placed.push(layoutComponent(comp, idx, parents, children));
   // shelf pack
   placed.sort((a, b) => b.w * b.h - a.w * a.h);
-  const GAP = 80, totalArea = placed.reduce((s, c) => s + (c.w + GAP) * (c.h + GAP), 0);
+  const GAP = state.fieldMode === 'none' ? 40 : 80, totalArea = placed.reduce((s, c) => s + (c.w + GAP) * (c.h + GAP), 0);
   const target = Math.max(placed.reduce((m, c) => Math.max(m, c.w), 0), Math.sqrt(totalArea * 1.7));
   let x = 0, y = 0, rowH = 0;
   for (const c of placed) {
@@ -265,7 +282,7 @@ function layoutComponent(ids, idx, parents, children) {
     }
   }
   // coordinates: wrap wide layers into sub-rows
-  const XGAP = 36, YGAP = 70, BUDGET = 2600, out = [];
+  const compact = state.fieldMode === 'none', XGAP = compact ? 22 : 36, YGAP = compact ? 36 : 70, BUDGET = 2600, out = [];
   let y = 0, maxW = 0; const rowsOut = [];
   for (const row of L) {
     const subs = []; let cur = [], w = 0;
@@ -363,13 +380,21 @@ function draw(nodes, edges, nmap) {
     const g = el('g', { transform: `translate(${n.x},${n.y})`, 'data-id': e.id }, nodeLayer); g.style.cursor = 'pointer';
     const box = el('rect', { width: n.w, height: n.h, rx: 7, fill: css('--node'), stroke: css('--node-border'), 'stroke-width': 1.2 }, g);
     if (e.deprecated) box.setAttribute('stroke-dasharray', '5 3');
+    if (n.lines) {
+      el('rect', { width: n.w, height: n.h, rx: 7, fill: kc, opacity: 0.14 }, g);
+      el('rect', { width: 5, height: n.h, rx: 2, fill: kc }, g);
+      n.lines.forEach((l, i) => { const t = el('text', { x: 14, y: 20 + i * LINE, 'font-size': 14, 'font-weight': 700, fill: css('--text'), 'font-family': 'system-ui,sans-serif' }, g); t.textContent = l; });
+      const sn = sensOf(e);
+      if (sn.length) { const bw = 12 + sn.join('/').length * 6.2; el('rect', { x: 12, y: n.h - 19, width: bw, height: 14, rx: 4, fill: css('--warn') }, g); const t = el('text', { x: 12 + bw / 2, y: n.h - 8.5, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 700, fill: '#fff', 'font-family': 'system-ui,sans-serif' }, g); t.textContent = sn.join('/'); }
+    } else {
     el('path', { d: `M0,7a7,7 0 0 1 7,-7h${n.w - 14}a7,7 0 0 1 7,7v${HEAD - 7}h-${n.w}z`, fill: kc, opacity: 0.16 }, g);
-    el('rect', { width: 4, height: HEAD, fill: kc, rx: 2 }, g);
-    const title = el('text', { x: 12, y: 15, 'font-size': 12, 'font-weight': 600, fill: css('--text'), 'font-family': 'system-ui,sans-serif' }, g); title.textContent = e.table;
-    const sub = el('text', { x: 12, y: 28, 'font-size': 9.5, fill: css('--muted'), 'font-family': 'system-ui,sans-serif' }, g);
-    sub.textContent = `${e.id} · ${e.deprecated ? 'DEPRECATED · ' : ''}${kindOf(e)}${e.volume && e.volume !== 'unknown' ? ' · ' + e.volume : ''}`;
-    const sens = sensOf(e);
-    if (sens.length) { const bw = 8 + sens.join('/').length * 6; el('rect', { x: n.w - bw - 8, y: 7, width: bw, height: 15, rx: 4, fill: css('--warn') }, g); const t = el('text', { x: n.w - bw / 2 - 8, y: 18, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 700, fill: '#fff', 'font-family': 'system-ui,sans-serif' }, g); t.textContent = sens.join('/'); }
+      el('rect', { width: 4, height: HEAD, fill: kc, rx: 2 }, g);
+      const title = el('text', { x: 12, y: 15, 'font-size': 12, 'font-weight': 600, fill: css('--text'), 'font-family': 'system-ui,sans-serif' }, g); title.textContent = e.table;
+      const sub = el('text', { x: 12, y: 28, 'font-size': 9.5, fill: css('--muted'), 'font-family': 'system-ui,sans-serif' }, g);
+      sub.textContent = `${e.id} · ${e.deprecated ? 'DEPRECATED · ' : ''}${kindOf(e)}${e.volume && e.volume !== 'unknown' ? ' · ' + e.volume : ''}`;
+      const sens = sensOf(e);
+      if (sens.length) { const bw = 8 + sens.join('/').length * 6; el('rect', { x: n.w - bw - 8, y: 7, width: bw, height: 15, rx: 4, fill: css('--warn') }, g); const t = el('text', { x: n.w - bw / 2 - 8, y: 18, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 700, fill: '#fff', 'font-family': 'system-ui,sans-serif' }, g); t.textContent = sens.join('/'); }
+    }
     const fg = el('g', { class: 'fields' }, g);
     n.rows.forEach((f, i) => {
       const y = HEAD + 12 + i * ROW;
