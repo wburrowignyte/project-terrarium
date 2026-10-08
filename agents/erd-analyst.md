@@ -34,7 +34,12 @@ precise, defensible logical data model.
    for each.
 4. Resolve the list into a model:
    - Separate **things** (entities) from **properties** (fields) and from **categories**
-     (reference tables: 3+ enumerated values → reference table).
+     (categories: 3+ enumerated values → rows in the shared `<PREFIX>_LOOKUP` under their own
+     `LOOKUP_TYPE`; use a dedicated `<ENTITY>_STATUS` table only when the values carry extra
+     attributes or relationships, and say why in its Purpose).
+   - Assign every entity (except the lookup) a **Group** by function, and write `## Groups`
+     (3–7 groups of 2–8 tables; give groups with the most cross-group relationships adjacent
+     orders; keep a Core table's dedicated children in its group).
    - Model many-to-many relationships as junction entities.
    - Prefer decisions stated by DHS stakeholders over vendor speculation. When speakers disagree,
      model the latest stated decision and raise an open question citing both sides.
@@ -46,6 +51,11 @@ precise, defensible logical data model.
    - every entity, field, and relationship has a citation or `ASSUMPTION`/`CONVENTION`
    - every FK points to an existing entity, and the types match
    - Mermaid entity names equal the table names
+   - every Group used by an entity is listed in `## Groups`, and every entity except the lookup has one
+   - every `FK→LOOKUP:<TYPE>` has seed values under the lookup entity (or an open question) and a
+     row in Relationships
+   - the Mermaid block has no relationship lines to the lookup table, and marks each LOOKUP FK
+     with a `"LOOKUP: <TYPE>"` comment
    - no PII/PHI values appear anywhere
 
 ## How to work: revise mode
@@ -54,7 +64,7 @@ precise, defensible logical data model.
 2. For each finding ID you were given, decide **Accept** (change the model), **Accept, partial**,
    or **Reject** (with a source-grounded rationale, e.g. the sources require a point-in-time
    snapshot). Don't silently ignore a finding.
-3. Apply accepted changes, keeping the IDs stable. Increment Version and add a Change log row
+3. Apply accepted changes, keeping the IDs and Group assignments stable. Increment Version and add a Change log row
    (Change set `review <file>`).
 4. Append rows to **Review responses**: `| F-n | Accept/Partial/Reject: rationale | what changed |`.
 
@@ -76,7 +86,8 @@ precise, defensible logical data model.
    - answers a `Q-n` → `resolve-question`;
    - supports an `A-n` → `confirm-assumption`;
    - visual content not extracted → `raise-question`.
-5. Apply the re-proposal rule from `changeset_spec`.
+5. Apply the re-proposal rule from `changeset_spec`. Every `add-entity` op names its Group; keep
+   existing Group assignments stable.
 6. Write the change set to `change_set_path` exactly per `changeset_spec`, with every Decision
    `pending`. **Don't edit `ERD.md` in this mode.**
 7. Self-check:
@@ -92,7 +103,9 @@ precise, defensible logical data model.
    - replace provisional IDs with the next free IDs, and rewrite them everywhere in the ERD (and in
      the change set's Target cells, as `E-new-1 → E-12`);
    - follow the *Deprecation* rules in the format spec;
-   - update the Mermaid diagram so it matches the tables;
+   - give every new entity a Group (from the op, else the Group of its closest parent) and keep
+     existing Group assignments stable;
+   - update the Mermaid diagram so it matches the tables (no lines to the lookup table);
    - update Summary only if the core entities changed.
 3. Increment Version, set Last updated, update the header Sources range, set Status to `Draft`, and
    add a Change log row.

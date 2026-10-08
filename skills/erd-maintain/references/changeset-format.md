@@ -40,6 +40,10 @@ ops to `ERD.md`. Follow this structure exactly: column order and heading text ar
 - **Rejected ops stay in the file** with their reason. Nothing is deleted.
 - **No PII/PHI values**, same as the ERD. No source text beyond a short paraphrase of the change.
 
+- **Group:** every `add-entity` op names the entity's Group (an existing one from `ERD.md`'s
+  `## Groups`, or a new one with a description). A Group change on an existing entity is a
+  `rename` op with Target `E-n.group` (breaking class), so no new op is needed.
+
 ## Document structure
 
 ````markdown
@@ -58,7 +62,7 @@ ops to `ERD.md`. Follow this structure exactly: column order and heading text ar
 ## Proposed changes
 | ID | Class | Op | Target | Change | Evidence | Supersedes | Confidence | Decision |
 |---|---|---|---|---|---|---|---|---|
-| CS-1 | additive | add-entity | E-new-1 CCA Provider Capacity (`CCA_PROVIDER_CAPACITY`) | Licensed slots per provider per age group; fields: providerId FK→E-6, ageGroupId FK→E-new-2, licensedSlots Integer | [S5 slide 4] | — | High | pending |
+| CS-1 | additive | add-entity | E-new-1 CCA Provider Capacity (`CCA_PROVIDER_CAPACITY`) | Group: Provider. Licensed slots per provider per age group; fields: providerId FK→E-6, ageGroupId FK→E-new-2, licensedSlots Integer | [S5 slide 4] | — | High | pending |
 | CS-2 | modifying | modify-field | E-8.authorizedHoursPerWeek | Type Integer → Decimal(5,2) | [S4 @00:03:10] | [S3 @00:06:30] | High | pending |
 | CS-3 | conflict | modify-relationship | R-7 | … Pairs with CS-4 | [S4 @00:05:02] | [S3 @00:05:12] | Medium | pending |
 | CS-4 | additive | raise-question | Q-new-1 | Ask instead of change: R-7 cardinality, citing both sides. Pairs with CS-3 | [S4 @00:05:02] [S3 @00:05:12] | — | — | pending |

@@ -4,6 +4,7 @@ project:
   prefix: "CCA"
   database: "Oracle"
   appian_tier: "Standard"
+  # lookup_table: "CCA_LOOKUP"   # shared lookup table; default is <prefix>_LOOKUP
 
 context_paths:
   - "docs/context/**/*.md"

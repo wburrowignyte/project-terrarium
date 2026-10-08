@@ -27,6 +27,8 @@ still cheap to make.
 2. In **delta** scope, walk the checklist only for `changed_ids` and every entity linked to them by
    a relationship. **If the change set has any accepted `breaking` or `conflict` op, review in full
    anyway.** Put the scope you actually used in the review's Scope row.
+   The diagram deliberately has **no relationship lines to the `<PREFIX>_LOOKUP` table**, and LOOKUP FKs
+   (`FK→LOOKUP:<TYPE>`) are marked in their tables instead. Judge them by the Relationships table, not the diagram.
 3. In full scope, walk **every section** of the checklist against the model. For each item, decide whether the ERD
    actually exhibits the risk. Only real, specific problems become findings; no generic advice.
 4. When a finding depends on a platform limit or behavior, confirm it with

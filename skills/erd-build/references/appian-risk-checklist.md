@@ -35,7 +35,13 @@ Severity guide:
 - [ ] Enumerations with 3+ values are reference tables, not Text fields. **Medium**.
 - [ ] Reference tables pass the 5-criteria test (small and static (<50 rows), controlled vocabulary, lookup purpose,
   no temporal attributes, only outward one-to-many relationships) and carry `label`, `sortOrder`, `isActive`.
-- [ ] Status tables are entity-scoped (`<ENTITY>_STATUS`), not a single shared `STATUS`.
+- [ ] Entity-scoped status tables (`<ENTITY>_STATUS`) and the project's shared `<PREFIX>_LOOKUP` are both
+  acceptable. A bare, shared `STATUS` table never is.
+- [ ] The database can't enforce that a LOOKUP FK points at a row of the right `LOOKUP_TYPE`. Is validation
+  planned (a check in the interface/process layer, or a per-type view)? **Medium**.
+- [ ] Values with lifecycle rules (allowed transitions) or extra attributes are forced into LOOKUP instead of
+  a dedicated table. **Medium**.
+- [ ] A LOOKUP FK (`FK→LOOKUP:<TYPE>`) has no row in Relationships. Appian needs one relationship per FK. **Low**.
 - [ ] Multi-valued attributes (comma lists, "field1/field2/field3") become child or junction tables.
 - [ ] Repeating groups and derived values: derived values should be custom record fields, not stored columns,
   unless the sources require point-in-time snapshots (common for eligibility determinations, so check).
