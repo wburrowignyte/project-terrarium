@@ -1,4 +1,8 @@
 .project-terrarium/staging/
 .project-terrarium/inputs/
-examples/sample-project/erd/ERD.md
-examples/sample-project/erd/reviews/*.md
+plugins/project-terrarium/examples/sample-project/erd/ERD.md
+plugins/project-terrarium/examples/sample-project/erd/reviews/*.md
+.claude/compact-memory/
+.claude/context-guard/
+__pycache__/
+.pytest_cache/

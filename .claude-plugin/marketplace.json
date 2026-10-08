@@ -1,12 +1,17 @@
 {
   "name": "project-terrarium-dev",
   "owner": { "name": "Ignyte Group" },
-  "metadata": { "description": "Local development marketplace for the project-terrarium plugin." },
+  "metadata": { "description": "Ignyte Group Claude Code plugins." },
   "plugins": [
     {
       "name": "project-terrarium",
-      "source": "./",
+      "source": "./plugins/project-terrarium",
       "description": "Project maintenance for software delivery engagements. Module 1: ERD build + Appian architecture review."
+    },
+    {
+      "name": "context-guard",
+      "source": "./plugins/context-guard",
+      "description": "Watch context size, ask about handing over to a fresh session at natural stopping points, and carry the handover note across a clear or compaction."
     }
   ]
 }

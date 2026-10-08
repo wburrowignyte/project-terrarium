@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Runs context_guard.py with the first Python that works. Never fails the session.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# A project-local guard takes over: run one guard, not two.
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -f "$CLAUDE_PROJECT_DIR/.claude/hooks/context_guard.py" ]; then
+  exit 0
+fi
+
+# Windows can have a python3 stub that exists but fails, so probe each one.
+for py in python3 python py; do
+  if command -v "$py" >/dev/null 2>&1 && "$py" -c '' </dev/null >/dev/null 2>&1; then
+    "$py" "$SCRIPT_DIR/context_guard.py"
+    exit 0
+  fi
+done
+exit 0

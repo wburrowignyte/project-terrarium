@@ -1,0 +1,8 @@
+{
+  "name": "context-guard",
+  "version": "0.3.0",
+  "description": "Watch context size, ask about handing over to a fresh session at natural stopping points, and carry the handover note across a clear or compaction.",
+  "author": {
+    "name": "Ignyte Group"
+  }
+}
