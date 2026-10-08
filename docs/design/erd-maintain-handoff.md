@@ -533,4 +533,8 @@ commands below, then report honestly what you did and didn't verify.
 
 ## Implementation notes
 
-(Builder: record decisions not covered above here.)
+- Task 3 (analyst maintain/apply modes) landed in the Task 2 commit, since both edit `agents/erd-analyst.md`.
+- Baseline ledger Locations are relative to the sample project (`docs/context/…`, `transcripts/…`); S3's fingerprint is `sha256:` because the transcript is a local file.
+- The baseline ERD has 14 entities and 18 relationships (including `County` and `Application Status` reference tables) so every FK has a Relationships row.
+- `README.md` fixture recipe (Task 8.6) was written with Task 7.
+- The deck's slide 5 title is "Provider identifiers", with the uniqueness rule only in the speaker notes.
