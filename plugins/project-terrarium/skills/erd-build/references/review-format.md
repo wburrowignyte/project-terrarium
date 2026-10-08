@@ -11,6 +11,7 @@ saves it verbatim to `<erd_dir>/reviews/<YYYY-MM-DD>-appian-review[-r<round>].md
 | Reviewed | <YYYY-MM-DD> |
 | ERD version | <n> |
 | Round | <1 or 2> |
+| Scope | full / delta: <changed IDs> |
 | Verdict | **Approve** / **Approve with changes** / **Rework** |
 | Findings | <n> High · <n> Medium · <n> Low |
 
