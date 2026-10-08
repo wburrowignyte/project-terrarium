@@ -10,7 +10,7 @@ connect the Microsoft 365 connector and fall back to local files (step 4).
 
 ## 1. Context MD files (consumer repo)
 
-Glob each pattern in `context_paths` from `project-maintainer.yaml`. Stage the matches **by
+Glob each pattern in `context_paths` from `project-terrarium.yaml`. Stage the matches **by
 reference**: record their repo-relative paths in the manifest and don't copy them, because they're
 already under git. Glossary or domain files (`CONTEXT.md`, `glossary.md`, `domain*.md`) go first,
 since they define the vocabulary the ERD should use.
@@ -46,7 +46,7 @@ Spreadsheets that are data dictionaries are high-value: read them.
 ## 4. Local fallback
 
 Also include any files under `local_inputs` from the config (default
-`.project-maintainer/inputs/`). This covers transcripts the user downloaded manually.
+`.project-terrarium/inputs/`). This covers transcripts the user downloaded manually.
 
 ## 5. Confirm before staging
 

@@ -21,10 +21,10 @@ Arguments: `$ARGUMENTS` (optional meeting/topic filter and date scope; empty mea
 
 ## Step 1: Load configuration
 
-Read `project-maintainer.yaml` at the repo root. If it's missing, stop and tell the user to run
-`/project-maintainer:setup`. Resolve:
+Read `project-terrarium.yaml` at the repo root. If it's missing, stop and tell the user to run
+`/project-terrarium:setup`. Resolve:
 `project.{name,prefix,database,appian_tier}`, `context_paths`, `sharepoint.*`, `local_inputs`,
-`outputs.erd_dir` (default `erd`), and `staging_dir` (default `.project-maintainer/staging`).
+`outputs.erd_dir` (default `erd`), and `staging_dir` (default `.project-terrarium/staging`).
 Confirm `staging_dir` is git-ignored (`git check-ignore`). If it isn't, stop and fix that first
 (offer to add it to `.gitignore`). Sources may contain PII/PHI.
 

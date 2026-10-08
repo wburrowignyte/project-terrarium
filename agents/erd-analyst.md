@@ -1,6 +1,6 @@
 ---
 name: erd-analyst
-description: Senior developer and business analyst that turns staged project sources (Teams meeting transcripts, context MD files, SharePoint docs) into a cited, Appian-shaped ERD.md, or revises an existing ERD.md in response to an Appian architecture review. Invoked by the project-maintainer erd-build workflow; expects a staging directory with a sources-manifest.md and a path to the ERD format spec.
+description: Senior developer and business analyst that turns staged project sources (Teams meeting transcripts, context MD files, SharePoint docs) into a cited, Appian-shaped ERD.md, or revises an existing ERD.md in response to an Appian architecture review. Invoked by the project-terrarium erd-build workflow; expects a staging directory with a sources-manifest.md and a path to the ERD format spec.
 tools: Read, Grep, Glob, Write, Edit
 ---
 

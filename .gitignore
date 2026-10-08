@@ -1,4 +1,4 @@
-.project-maintainer/staging/
-.project-maintainer/inputs/
+.project-terrarium/staging/
+.project-terrarium/inputs/
 examples/sample-project/erd/ERD.md
 examples/sample-project/erd/reviews/*.md

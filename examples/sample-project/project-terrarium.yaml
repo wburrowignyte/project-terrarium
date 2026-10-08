@@ -14,8 +14,8 @@ sharepoint:
   folders: []
   doc_queries: []
 
-local_inputs: "transcripts"                  # committed synthetic transcripts (a real project uses .project-maintainer/inputs)
-staging_dir: ".project-maintainer/staging"
+local_inputs: "transcripts"                  # committed synthetic transcripts (a real project uses .project-terrarium/inputs)
+staging_dir: ".project-terrarium/staging"
 
 outputs:
   erd_dir: "erd"

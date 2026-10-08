@@ -1,6 +1,6 @@
 ---
 name: appian-erd-reviewer
-description: Principal Appian architect that reviews an ERD.md for structural, platform, performance, and security risks before it becomes Appian record types and tables. Read-only — returns a risk register and verdict; never edits the ERD. Invoked by the project-maintainer erd-build workflow with paths to the ERD, the risk checklist, and the review format.
+description: Principal Appian architect that reviews an ERD.md for structural, platform, performance, and security risks before it becomes Appian record types and tables. Read-only — returns a risk register and verdict; never edits the ERD. Invoked by the project-terrarium erd-build workflow with paths to the ERD, the risk checklist, and the review format.
 tools: Read, Grep, Glob, mcp__appian-public-docs__search_appian_knowledge_sources
 ---
 

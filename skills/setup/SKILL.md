@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Configure the project-maintainer plugin for this project repo — write project-maintainer.yaml (project prefix, target DB, context MD locations, SharePoint/Teams source hints, output and staging paths), git-ignore the staging area, and verify the Microsoft 365 connector and Appian docs tools are reachable. Run once per project repo before /project-maintainer:erd-build.
+description: Configure the project-terrarium plugin for this project repo — write project-terrarium.yaml (project prefix, target DB, context MD locations, SharePoint/Teams source hints, output and staging paths), git-ignore the staging area, and verify the Microsoft 365 connector and Appian docs tools are reachable. Run once per project repo before /project-terrarium:erd-build.
 disable-model-invocation: true
 ---
 
@@ -13,7 +13,7 @@ Work one question at a time. Explore first, propose values, and confirm before y
 
 ## 1. Explore
 
-- Look for an existing `project-maintainer.yaml`. If one exists, show it and ask what to change.
+- Look for an existing `project-terrarium.yaml`. If one exists, show it and ask what to change.
 - Find likely context MD files: Glob `**/*.md`, excluding `node_modules`, `.git`, and the staging dir. Look for
   `CONTEXT.md`, `glossary*`, `domain*`, `docs/context/**`, `outputs/CONTEXT.md`. Propose `context_paths` globs.
 - Check that the Microsoft 365 connector tools are available (`outlook_calendar_search`,
@@ -34,10 +34,10 @@ Work one question at a time. Explore first, propose values, and confirm before y
 
 ## 3. Write
 
-`project-maintainer.yaml`:
+`project-terrarium.yaml`:
 
 ```yaml
-# project-maintainer configuration — safe to commit (no secrets, no source content)
+# project-terrarium configuration — safe to commit (no secrets, no source content)
 project:
   name: "MN DHS <program>"
   prefix: "DHS"
@@ -56,8 +56,8 @@ sharepoint:
     - "data dictionary"
     - "business requirements"
 
-local_inputs: ".project-maintainer/inputs"   # manually downloaded transcripts/docs (git-ignored)
-staging_dir: ".project-maintainer/staging"   # extracted source text per run (git-ignored)
+local_inputs: ".project-terrarium/inputs"   # manually downloaded transcripts/docs (git-ignored)
+staging_dir: ".project-terrarium/staging"   # extracted source text per run (git-ignored)
 
 outputs:
   erd_dir: "erd"
@@ -66,17 +66,17 @@ outputs:
 Add to `.gitignore` (create it if absent, and don't duplicate existing lines):
 
 ```
-# project-maintainer: raw source material may contain PII/PHI
-.project-maintainer/staging/
-.project-maintainer/inputs/
+# project-terrarium: raw source material may contain PII/PHI
+.project-terrarium/staging/
+.project-terrarium/inputs/
 ```
 
-Create `.project-maintainer/inputs/` and `<erd_dir>/reviews/` if they're missing.
+Create `.project-terrarium/inputs/` and `<erd_dir>/reviews/` if they're missing.
 
 ## 4. Verify
 
-- `git check-ignore .project-maintainer/staging/x` succeeds.
+- `git check-ignore .project-terrarium/staging/x` succeeds.
 - If the M365 connector is available, run one `outlook_calendar_search` for the first meeting series
   (limit 3) and report how many events were found and whether they have `meetingTranscriptUrl`.
   Don't read transcript content during setup.
-- Finish by telling the user to run `/project-maintainer:erd-build`.
+- Finish by telling the user to run `/project-terrarium:erd-build`.
