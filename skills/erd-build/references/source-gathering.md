@@ -88,7 +88,8 @@ transcripts, keep the speaker labels and timestamps, because citations point to 
 
 **Slide decks** stage as one `## Slide <k>: <title>` section per slide (1-based), then the body
 text, tables, and the speaker notes as `**Notes:** <text>`. A slide with under ~15 words **and** a
-picture/graphic shape gets the line `[visual content not extracted]`. The analyst turns those into
+picture/graphic shape gets the line `[visual content not extracted]`. Citations to a slide use
+`[S<n> slide <k>]`. The analyst turns those into
 open questions.
 
 Write `<staging_dir>/<run-date>/sources-manifest.md`. It lists what was staged **this run**, using

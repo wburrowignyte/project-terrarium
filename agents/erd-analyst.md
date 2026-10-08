@@ -66,7 +66,7 @@ precise, defensible logical data model.
    vocabulary. Never re-read old sources to look for new requirements; open an old source only to
    check a citation listed in *Supersedes*.
 4. For each requirement signal in the new sources, compare it with the current model and classify
-   it:
+   it (op and class per `changeset_spec`: additive, modifying, breaking or conflict):
    - already modeled the same way → `add-citation`;
    - new → `add-*`;
    - differs → `modify-*`, `rename` or `deprecate`, with the old citation in *Supersedes*;

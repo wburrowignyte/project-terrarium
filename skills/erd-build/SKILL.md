@@ -37,8 +37,7 @@ Follow `references/source-gathering.md` exactly:
 2. **Gate A:** show the candidate table and get the user's confirmation or pruning.
 3. Read and stage the confirmed sources into `STAGE`, and write `STAGE/sources-manifest.md`.
 
-Allocate source IDs from the **source ledger** `<erd_dir>/sources.md` (never restart at S1 when a
-ledger exists), and after staging append and update the ledger rows. The ledger format and the
+Allocate source IDs from the **source ledger** `<erd_dir>/sources.md` (IDs continue across runs), and after staging append and update the ledger rows. The ledger format and the
 matching rules are in `source-gathering.md`.
 
 **Migration.** If `<erd_dir>/ERD.md` exists but `sources.md` doesn't:
