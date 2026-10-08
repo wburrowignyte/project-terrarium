@@ -30,6 +30,7 @@ Work one question at a time. Explore first, propose values, and confirm before y
 5. **Teams meeting series** to pull transcripts from (subject keywords, e.g. "DHS Data Workshop").
 6. **SharePoint**: pinned folder name(s) to narrow searches, and doc topics to search
    (e.g. "data dictionary", "requirements", "business rules").
+   6b. **Slide decks**: where are they uploaded? (folder names, optional; narrows the pptx/pdf search)
 7. Output dir (default `erd`).
 
 ## 3. Write
@@ -52,6 +53,7 @@ sharepoint:
     - "Data Workshop"
   transcript_folders: []    # optional: folders holding exported .vtt/.docx transcripts
   folders: []               # optional: pinned folders for doc search
+  deck_folders: []          # optional: folders where slide decks are uploaded (narrows pptx/pdf search)
   doc_queries:              # content searches for supporting documents
     - "data dictionary"
     - "business requirements"
@@ -61,6 +63,10 @@ staging_dir: ".project-terrarium/staging"   # extracted source text per run (git
 
 outputs:
   erd_dir: "erd"
+
+maintain:
+  lookback_days: 3          # overlap before the ledger watermark when searching remote sources
+  auto_accept: []           # change-set classes accepted without asking, e.g. [additive]
 ```
 
 Add to `.gitignore` (create it if absent, and don't duplicate existing lines):
@@ -71,7 +77,7 @@ Add to `.gitignore` (create it if absent, and don't duplicate existing lines):
 .project-terrarium/inputs/
 ```
 
-Create `.project-terrarium/inputs/` and `<erd_dir>/reviews/` if they're missing.
+Create `.project-terrarium/inputs/`, `<erd_dir>/reviews/` and `<erd_dir>/changes/` if they're missing.
 
 ## 4. Verify
 
@@ -79,4 +85,4 @@ Create `.project-terrarium/inputs/` and `<erd_dir>/reviews/` if they're missing.
 - If the M365 connector is available, run one `outlook_calendar_search` for the first meeting series
   (limit 3) and report how many events were found and whether they have `meetingTranscriptUrl`.
   Don't read transcript content during setup.
-- Finish by telling the user to run `/project-terrarium:erd-build`.
+- Finish by telling the user to run `/project-terrarium:erd-build`, and `/project-terrarium:erd-maintain` for later updates.
