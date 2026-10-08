@@ -1,0 +1,29 @@
+WEBVTT
+
+00:00:05.000 --> 00:00:14.000
+<v Facilitator>Today we want to walk through what data the new system needs to hold for an application.
+
+00:01:02.000 --> 00:01:20.000
+<v County Lead>Every application belongs to a household, and we record which county received it and which worker it's assigned to.
+
+00:02:10.000 --> 00:02:31.000
+<v County Lead>A household has many members. For each member we capture name, date of birth, relationship to the applicant, and for the applicant, the SSN.
+
+00:03:45.000 --> 00:04:05.000
+<v Policy Analyst>Income is per member and per source — wages, self-employment, child support, other. We need monthly amount and the verification document.
+
+00:05:12.000 --> 00:05:40.000
+<v County Lead>Once approved, a case is created. A child can have authorizations with more than one provider at the same time, and a provider obviously serves many children.
+
+00:06:30.000 --> 00:06:52.000
+<v Policy Analyst>Each authorization has a start date, end date, and authorized hours per week. Authorizations get revised a lot, and auditors want to see every prior version.
+
+00:07:40.000 --> 00:08:02.000
+<v County Lead>Workers write case notes constantly. Some notes are several pages long. A busy case can have hundreds of notes.
+
+00:09:15.000 --> 00:09:35.000
+<v Facilitator>Do providers need anything beyond name and license number?
+<v County Lead>License type — licensed family, licensed center, or legally non-licensed — and their address and county.
+
+00:10:20.000 --> 00:10:40.000
+<v Policy Analyst>Open question for the state: do we track co-payment amounts per case or per authorization? We haven't decided.

@@ -1,0 +1,109 @@
+# ERD.md format (the contract)
+
+`ERD.md` is the canonical, git-tracked data model for the project. The `erd-analyst` writes it,
+the `appian-erd-reviewer` reads it, and future maintenance runs diff against it. Follow this
+structure exactly: section order, heading text, and table columns are what later runs parse.
+
+## Rules
+
+- **Logical model, Appian-shaped.** Model entities as they will become Appian record types
+  backed by database tables. Follow the naming conventions below.
+- **Every entity, field, and relationship carries a citation.** A citation is a source id from
+  `sources-manifest.md` plus a locator, e.g. `[S3 @00:14:32]` (transcript timestamp) or
+  `[S1 §Eligibility]` (doc section). Multiple citations are space-separated.
+- **No citation means it's an assumption.** If you add something the sources don't support
+  (audit fields, a reference table implied by "status"), cite `ASSUMPTION` and list it under
+  *Assumptions*. Standard platform fields (`id`, audit fields) may cite `CONVENTION`.
+- **Never put PII/PHI values in the ERD.** Describe fields (e.g. "client SSN"), never example
+  data from transcripts.
+- **Stable IDs.** Each entity has an ID `E-<n>`, each relationship `R-<n>`, each question
+  `Q-<n>`, each assumption `A-<n>`. Never renumber existing IDs; append new ones.
+
+## Naming conventions
+
+Use these unless the project config or a context MD file says otherwise. If they conflict, follow the project and note it.
+
+| Thing | Convention | Example |
+|---|---|---|
+| Table | `<PREFIX>_<ENTITY>`, UPPER_SNAKE, singular, ≤30 chars if DB is Oracle | `DHS_CASE` |
+| Column | UPPER_SNAKE; PK `ID`; FK `<REFERENCED_ENTITY>_ID`; boolean `IS_<X>` | `CASE_STATUS_ID` |
+| Record type | `<PREFIX> <Entity Name>` (Title Case) | `DHS Case` |
+| Record field | camelCase; PK `id`; FK `<entity>Id`; boolean `is<X>`; `<x>Date` / `<x>At` | `caseStatusId` |
+| Status/ref table | `<ENTITY>_STATUS`, never a bare `STATUS` | `DHS_CASE_STATUS` |
+
+Field types: use Appian types: `Integer`, `Decimal`, `Text`, `Extra Long Text`, `Boolean`,
+`Date`, `Date and Time`, `User`, `Group`, `Document`.
+
+## Document structure
+
+````markdown
+# <Project name>: Entity Relationship Diagram
+
+| | |
+|---|---|
+| Version | <n> (increment on every write) |
+| Last updated | <YYYY-MM-DD> |
+| Application prefix | <PREFIX> |
+| Target database | <Oracle / MySQL / SQL Server / PostgreSQL / unknown> |
+| Sources | See `sources-manifest.md` for run <YYYY-MM-DD> (S1–S<n>) |
+| Status | Draft / Reviewed: <verdict> |
+
+## Summary
+2–5 sentences: the business domain covered, the core entities, and what's still unsettled.
+
+## Diagram
+
+```mermaid
+erDiagram
+    DHS_CASE ||--o{ DHS_CASE_PARTICIPANT : "has"
+    DHS_CASE {
+        int ID PK
+        int CASE_STATUS_ID FK
+        string CASE_NUMBER UK
+    }
+```
+(Use table names as Mermaid entity names. List every field with its type, plus PK, FK, or UK
+markers. Use crow's-foot cardinality matching the Relationships table.)
+
+## Entities
+
+### E-1 DHS Case (`DHS_CASE`)
+- **Purpose:** <one sentence>
+- **Kind:** Core | Reference | Junction | History/Audit
+- **Est. volume:** <rows / growth if sources say; else "unknown">
+- **Sensitivity:** None | PII | PHI | FTI | CJI (mark the highest present)
+- **Sources:** [S2 @00:05:10] [S1 §Case lifecycle]
+
+| Field | Column | Type | Req | Key | Description | Sources |
+|---|---|---|---|---|---|---|
+| id | ID | Integer | Y | PK | Surrogate key | CONVENTION |
+| caseNumber | CASE_NUMBER | Text(20) | Y | UK | Human-facing case number | [S2 @00:06:02] |
+| caseStatusId | CASE_STATUS_ID | Integer | Y | FK→E-2 | Current status | [S2 @00:07:40] |
+
+(Repeat for every entity. For reference tables, list the seed values below the table when the sources give them.)
+
+## Relationships
+
+| ID | From (many/child side) | To (one/parent side) | Cardinality | FK field | Description | Sources |
+|---|---|---|---|---|---|---|
+| R-1 | E-3 DHS Case Participant | E-1 DHS Case | many-to-one | caseId | A case has many participants | [S2 @00:09:15] |
+
+(Cardinality is one of `many-to-one`, `one-to-one`. Each row implies the inverse
+`one-to-many` relationship on the parent record type. Express many-to-many as a junction entity with two `many-to-one` rows.)
+
+## Assumptions
+| ID | Assumption | Affects | Why |
+|---|---|---|---|
+
+## Open questions
+| ID | Question for stakeholders | Affects | Raised by |
+|---|---|---|---|
+
+## Out of scope / deferred
+Bullets for concepts heard in the sources but deliberately not modeled, with the reason.
+
+## Review responses
+(Added only after an Appian architecture review. One row per finding sent back.)
+| Finding | Response | Change made |
+|---|---|---|
+````

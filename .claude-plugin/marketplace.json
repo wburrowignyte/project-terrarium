@@ -1,0 +1,12 @@
+{
+  "name": "project-maintainer-dev",
+  "owner": { "name": "Ignyte Group" },
+  "metadata": { "description": "Local development marketplace for the project-maintainer plugin." },
+  "plugins": [
+    {
+      "name": "project-maintainer",
+      "source": "./",
+      "description": "Project maintenance for software delivery engagements. Module 1: ERD build + Appian architecture review."
+    }
+  ]
+}

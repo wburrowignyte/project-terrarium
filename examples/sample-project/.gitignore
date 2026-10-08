@@ -1,0 +1,3 @@
+# project-maintainer: raw source material may contain PII/PHI
+.project-maintainer/staging/
+.project-maintainer/inputs/

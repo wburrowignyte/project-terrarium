@@ -1,0 +1,8 @@
+{
+  "name": "project-maintainer",
+  "version": "0.1.0",
+  "description": "Project maintenance for software delivery engagements. Module 1: build an Appian-ready ERD from Teams transcripts, project context MD files, and SharePoint docs, then have an Appian architect review it for structural risk.",
+  "author": {
+    "name": "Ignyte Group"
+  }
+}

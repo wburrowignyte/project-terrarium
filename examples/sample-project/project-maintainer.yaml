@@ -1,0 +1,21 @@
+# Sample configuration — synthetic data only, for testing the plugin.
+project:
+  name: "Sample County Child Care Assistance"
+  prefix: "CCA"
+  database: "Oracle"
+  appian_tier: "Standard"
+
+context_paths:
+  - "docs/context/**/*.md"
+
+sharepoint:
+  meeting_series: []        # empty: the sample uses local transcripts only
+  transcript_folders: []
+  folders: []
+  doc_queries: []
+
+local_inputs: "transcripts"                  # committed synthetic transcripts (a real project uses .project-maintainer/inputs)
+staging_dir: ".project-maintainer/staging"
+
+outputs:
+  erd_dir: "erd"

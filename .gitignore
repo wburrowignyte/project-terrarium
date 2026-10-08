@@ -1,0 +1,4 @@
+.project-maintainer/staging/
+.project-maintainer/inputs/
+examples/sample-project/erd/ERD.md
+examples/sample-project/erd/reviews/*.md
