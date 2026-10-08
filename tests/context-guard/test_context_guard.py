@@ -21,6 +21,8 @@ def project(tmp_path, monkeypatch):
         if key.startswith("CONTEXT_GUARD_"):
             monkeypatch.delenv(key)
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
+    # A 300K compaction window: SOFT 120K, HARD 200K, COMPACT_AT 237K.
+    monkeypatch.setenv("CONTEXT_GUARD_WINDOW", "300000")
     return tmp_path
 
 
@@ -86,7 +88,8 @@ def test_stop_hook_active_defers(project):
     assert run_guard(event("Stop", t))["decision"] == "block"
 
 
-def test_hard_limit_repeats_every_step(project):
+def test_hard_limit_repeats_every_step(project, monkeypatch):
+    monkeypatch.setenv("CONTEXT_GUARD_COMPACT_AT", "0")
     t = transcript(project, usage_line(210000))
     assert "hard limit" in run_guard(event("Stop", t))["reason"]
     assert run_guard(event("Stop", t)) is None
@@ -133,12 +136,12 @@ def test_idle_session_records_stopping_point(project):
     t = transcript(project, usage_line(130000, ts=old))
     run_guard(event("Stop", t))  # consume the soft limit
     run_guard(event("UserPromptSubmit", t))
-    assert "idle" in run_guard(event("Stop", t))["reason"]
+    assert "idle for over an hour, so the last prompt re-read" in run_guard(event("Stop", t))["reason"]
 
 
 # 5
 def write_note(project, age_hours=0):
-    memory = project / ".claude" / "compact-memory"
+    memory = project / ".context-guard"
     memory.mkdir(parents=True)
     note = memory / "latest.md"
     note.write_text("Task: ship the widget\n", encoding="utf-8")
@@ -183,7 +186,7 @@ def test_subagent_input_does_nothing(project):
     t = transcript(project, usage_line(130000))
     for key in ("agent_id", "agent_type"):
         assert run_guard(event("Stop", t, **{key: "x"})) is None
-    assert not (project / ".claude" / "context-guard").exists()
+    assert not (project / ".context-guard").exists()
 
 
 # 8
@@ -195,12 +198,17 @@ def test_project_local_guard_takes_over(project):
     t = transcript(project, usage_line(130000))
     run_guard(event("UserPromptSubmit", t), via_launcher=True)
     assert run_guard(event("Stop", t), via_launcher=True) is None
-    assert not (project / ".claude" / "context-guard").exists()
+    assert not (project / ".context-guard").exists()
 
 
 # Compaction
-def test_handover_saved_before_auto_compaction(project):
-    t = transcript(project, usage_line(285000))
+def project_hooks(project, settings):
+    (project / ".claude").mkdir(exist_ok=True)
+    (project / ".claude" / "settings.json").write_text(json.dumps(settings), encoding="utf-8")
+
+
+def test_handover_requested_at_stop_before_compaction(project):
+    t = transcript(project, usage_line(240000))
     out = run_guard(event("Stop", t))
     assert "auto-compacted soon" in out["reason"]
     assert run_guard(event("Stop", t, stop_hook_active=True)) is None
@@ -208,12 +216,42 @@ def test_handover_saved_before_auto_compaction(project):
     assert run_guard(event("Stop", t)) is None
 
 
+def test_handover_requested_mid_task_counting_the_new_tool_result(project):
+    # Compaction fires between tool calls, so the request cannot wait for Stop.
+    t = transcript(project, usage_line(220000))
+    big = {"type": "text", "file": {"content": "x" * 60000}}  # ~20K tokens not yet in usage
+    out = run_guard(event("PostToolUse", t, tool_name="Read", tool_response=big))
+    ctx = out["hookSpecificOutput"]
+    assert ctx["hookEventName"] == "PostToolUse"
+    assert "auto-compacted soon" in ctx["additionalContext"]
+    assert "carry on with the task" in ctx["additionalContext"]
+    assert run_guard(event("PostToolUse", t, tool_name="Read", tool_response=big)) is None
+
+
+def test_compaction_clears_stale_size_reasons_and_rearms(project):
+    t = transcript(project, usage_line(240000))
+    run_guard(event("PostToolUse", t, tool_name="Read"))  # records hard, asks for the note
+    t = transcript(project, usage_line(30000))  # compacted
+    assert run_guard(event("Stop", t)) is None
+    t = transcript(project, usage_line(240000))
+    assert "auto-compacted soon" in run_guard(event("Stop", t))["reason"]
+
+
+def test_default_thresholds_fit_a_200k_window(project, monkeypatch):
+    monkeypatch.delenv("CONTEXT_GUARD_WINDOW")
+    t = transcript(project, usage_line(105000))
+    assert "soft limit of 100,000" in run_guard(event("Stop", t))["reason"]
+    t = transcript(project, usage_line(140000))  # compaction fires near 167K
+    out = run_guard(event("PostToolUse", t, tool_name="Read"))
+    assert "auto-compacted soon" in out["hookSpecificOutput"]["additionalContext"]
+
+
 def test_precompact_writes_fallback_note(project):
     t = transcript(project, prompt_line("build the importer"), usage_line(300000),
                    {"type": "user", "message": {"content": [{"type": "tool_result", "content": "x"}]}},
                    prompt_line("<command-name>/compact</command-name>"))
     assert run_guard(event("PreCompact", t, trigger="auto")) is None
-    note = (project / ".claude" / "compact-memory" / "latest.md").read_text(encoding="utf-8")
+    note = (project / ".context-guard" / "latest.md").read_text(encoding="utf-8")
     assert "build the importer" in note and "tool_result" not in note and "/compact" not in note
 
 
@@ -224,24 +262,37 @@ def test_precompact_keeps_a_recent_note(project):
 
 
 def test_precompact_stands_down_for_project_hooks(project):
-    (project / ".claude").mkdir()
-    (project / ".claude" / "settings.json").write_text('{"x": "compact-memory"}', encoding="utf-8")
+    project_hooks(project, {"hooks": {"PreCompact": [{"hooks": [
+        {"type": "command", "command": "echo save to .claude/compact-memory/latest.md"}]}]}})
     run_guard(event("PreCompact", transcript(project, prompt_line("build it"))))
-    assert not (project / ".claude" / "compact-memory").exists()
+    assert not (project / ".context-guard").exists()
 
 
-# SessionStart
-@pytest.mark.skipif(BASH is None, reason="bash not available")
+def test_other_mentions_of_compact_memory_do_not_stand_down(project):
+    project_hooks(project, {"permissions": {"allow": ["Read(.claude/compact-memory/**)"]},
+                            "hooks": {"Stop": [{"hooks": [{"type": "command", "command": "true"}]}]}})
+    run_guard(event("PreCompact", transcript(project, prompt_line("build it"))))
+    assert (project / ".context-guard" / "latest.md").exists()
+
+
+# SessionStart (after a compaction or /clear)
 def test_session_start_loads_note_once(project):
     memory = write_note(project)
-    cmd = [BASH, str(HOOKS / "run-hook.cmd"), "session-start"]
-    out = subprocess.run(cmd, input=b"{}", capture_output=True, env=dict(os.environ), timeout=30)
-    assert out.returncode == 0 and b"ship the widget" in out.stdout
+    out = run_guard(event("SessionStart", transcript(project), source="compact"))
+    ctx = out["hookSpecificOutput"]
+    assert ctx["hookEventName"] == "SessionStart" and "ship the widget" in ctx["additionalContext"]
     assert (memory / "previous.md").exists() and not (memory / "latest.md").exists()
+    assert run_guard(event("SessionStart", transcript(project), source="clear")) is None
+
+
+def test_session_start_leaves_stale_note_alone(project):
+    memory = write_note(project, age_hours=25)
+    assert run_guard(event("SessionStart", transcript(project), source="clear")) is None
+    assert (memory / "latest.md").exists()
 
 
 def test_old_state_files_are_pruned(project):
-    state = project / ".claude" / "context-guard"
+    state = project / ".context-guard" / "state"
     state.mkdir(parents=True)
     old = state / "gone.json"
     old.write_text("{}")

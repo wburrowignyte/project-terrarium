@@ -4,7 +4,6 @@ plugins/project-terrarium/examples/sample-project/erd/ERD.md
 plugins/project-terrarium/examples/sample-project/erd/reviews/*.md
 plugins/project-terrarium/examples/sample-project/erd/sources.md
 plugins/project-terrarium/examples/sample-project/erd/changes/
-.claude/compact-memory/
-.claude/context-guard/
+.context-guard/
 __pycache__/
 .pytest_cache/

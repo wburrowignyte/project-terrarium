@@ -4,7 +4,7 @@ A Claude Code plugin marketplace from Ignyte Group.
 
 | Plugin | What it does | Docs |
 |---|---|---|
-| `project-terrarium` | Project maintenance for software delivery engagements (ERD build + Appian architecture review). | [README](plugins/project-terrarium/README.md) |
+| `project-terrarium` | Project maintenance for software delivery engagements: ERD build, incremental ERD maintain from new meetings and slide decks, and Appian architecture review. | [README](plugins/project-terrarium/README.md) |
 | `context-guard` | Generic. Watches context size, suggests a handover to a fresh session at natural stopping points, and carries the note across a clear or compaction. | [README](plugins/context-guard/README.md) |
 
 ## Install

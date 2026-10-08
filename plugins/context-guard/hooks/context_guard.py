@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """context-guard: watch context size, record stopping points, ask about a handover.
 
-Runs on UserPromptSubmit, PostToolUse, Stop and PreCompact. Reads the hook JSON
-from stdin.
+Runs on UserPromptSubmit, PostToolUse, Stop, PreCompact and SessionStart.
+Reads the hook JSON from stdin.
 Stopping points are only recorded while a task runs; the Stop hook asks the
 user about them once the task is done. This script must never fail a session.
 """
@@ -18,6 +18,13 @@ COMMIT_MIN_CTX = 50000
 IDLE_SECONDS = 60 * 60
 FRESH_NOTE_SECONDS = 60 * 60
 FALLBACK_PROMPTS = 5
+# Measured: auto-compaction fires when the next request would pass roughly
+# (compaction window - 33K) tokens, between tool calls as well as between turns.
+COMPACTION_RESERVE = 33000
+# The transcript's usage lags by the tool result that just came back, which can
+# be ~25K tokens; ask for the handover this far ahead of compaction.
+COMPACT_MARGIN = 30000
+CHARS_PER_TOKEN = 3
 STATE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
 
 
@@ -35,10 +42,13 @@ def env_float(name, default):
         return default
 
 
-SOFT = env_int("CONTEXT_GUARD_SOFT", 120000)
-HARD = max(env_int("CONTEXT_GUARD_HARD", 200000), SOFT)
+# The window auto-compaction measures against: the smaller of the model's
+# context window and autoCompactWindow. 200K is the safe default.
+WINDOW = env_int("CONTEXT_GUARD_WINDOW", 200000)
+COMPACT_AT = env_int("CONTEXT_GUARD_COMPACT_AT", WINDOW - COMPACTION_RESERVE - COMPACT_MARGIN)
+SOFT = env_int("CONTEXT_GUARD_SOFT", min(120000, WINDOW // 2))
+HARD = max(env_int("CONTEXT_GUARD_HARD", min(200000, COMPACT_AT - 15000)), SOFT)
 STEP = max(env_int("CONTEXT_GUARD_STEP", 50000), 1)
-COMPACT_AT = env_int("CONTEXT_GUARD_COMPACT_AT", 280000)
 COMMIT_PATTERN = os.environ.get("CONTEXT_GUARD_COMMIT_PATTERN", "")
 HANDOVER_MAX_AGE_HOURS = env_float("CONTEXT_GUARD_HANDOVER_MAX_AGE", 24)
 
@@ -47,6 +57,11 @@ HANDOVER_SPEC = (
     "the open steps, decisions not yet written down anywhere, and anything a "
     "fresh session would otherwise have to re-derive."
 )
+
+
+# Outside .claude/, which Claude Code treats as sensitive: writing a note there
+# always asks for permission, even mid-task.
+GUARD_DIR = ".context-guard"
 
 
 def project_dir(data):
@@ -166,8 +181,8 @@ def describe(reason, ctx):
     if reason == "commit":
         return "a milestone commit just landed, which is a natural break"
     if reason == "idle":
-        return ("the session sat idle for over an hour, so the prompt cache has "
-                "expired and the next call re-reads all of it at full price")
+        return ("the session sat idle for over an hour, so the last prompt re-read "
+                "the whole context at full price; another long break will do the same")
     return reason
 
 
@@ -183,31 +198,44 @@ def ask_user(ctx, pending, handover_path):
         "  3. keep going\n"
         "Write nothing and clear nothing until they answer.\n"
         "On 1 or 2: " + HANDOVER_SPEC + "\n"
-        "On 1, after writing it: if the tool mcp__ccd_session_mgmt__clear_session exists "
-        "(load it via ToolSearch if needed), tell the user the window will go empty and "
-        "that any message they send picks the handover up; optionally set the session "
-        "title with set_session_title to \"Handover ready - send any message\"; then call "
-        "clear_session(\"self\"). Without that tool, tell them to run /clear and then send "
-        "any message."
+        "On 1, after writing it: if a tool that clears this session is available (the "
+        "Claude desktop app has offered one named mcp__ccd_session_mgmt__clear_session; "
+        "look for it with ToolSearch), tell the user the window will go empty and that "
+        "any message they send picks the handover up; if a set_session_title tool is "
+        "also available, you may title the session \"Handover ready - send any "
+        "message\"; then clear the session. Without such a tool, tell them to run /clear "
+        "and then send any message."
     ).format(ctx=ctx, reasons=reasons, path=handover_path)
 
 
-def prepare_for_compaction(ctx, handover_path):
+def prepare_for_compaction(ctx, handover_path, at_stop):
+    then = ("then tell the user in one line that a handover note is saved in case the "
+            "context is compacted, and stop." if at_stop else
+            "then carry on with the task exactly where you left off, without comment.")
     return (
         "[context-guard] This session's context is about {ctx:,} tokens and will be "
-        "auto-compacted soon. Do not ask the user anything first. " + HANDOVER_SPEC + " "
-        "Then tell the user in one line that a handover note is saved in case the "
-        "context is compacted, and stop."
+        "auto-compacted soon. Before anything else, without asking the user: "
+        + HANDOVER_SPEC + " Keep it current as of this moment; " + then
     ).format(ctx=ctx, path=handover_path)
 
 
 def stands_down(root):
-    """A compact-memory hook in the project's settings already handles handovers."""
+    """A hook in the project's settings already handles compact-memory handovers."""
     try:
         with open(os.path.join(root, ".claude", "settings.json"), encoding="utf-8") as f:
-            return "compact-memory" in f.read()
-    except OSError:
+            hooks = json.load(f).get("hooks")
+    except (OSError, ValueError, AttributeError):
         return False
+    if not isinstance(hooks, dict):
+        return False
+    for groups in hooks.values():
+        for group in groups if isinstance(groups, list) else []:
+            entries = group.get("hooks") if isinstance(group, dict) else None
+            for hook in entries if isinstance(entries, list) else []:
+                command = hook.get("command") if isinstance(hook, dict) else None
+                if isinstance(command, str) and "compact-memory" in command:
+                    return True
+    return False
 
 
 def recent_prompts(transcript_path, limit):
@@ -270,6 +298,16 @@ def write_fallback_note(memory_dir, transcript_path):
         f.write("\n".join(lines) + "\n")
 
 
+def output_chars(response):
+    """Rough size of a tool result the transcript's usage does not count yet."""
+    if isinstance(response, str):
+        return len(response)
+    try:
+        return len(json.dumps(response))
+    except (TypeError, ValueError):
+        return 0
+
+
 def pick_up_handover(memory_dir):
     latest = os.path.join(memory_dir, "latest.md")
     try:
@@ -300,12 +338,19 @@ def run(data):
     root = project_dir(data)
     if event == "PreCompact":
         if not stands_down(root):
-            write_fallback_note(os.path.join(root, ".claude", "compact-memory"),
+            write_fallback_note(os.path.join(root, GUARD_DIR),
                                 data.get("transcript_path"))
         return
+    if event == "SessionStart":  # after a compaction or /clear (see the matcher)
+        if not stands_down(root):
+            text = pick_up_handover(os.path.join(root, GUARD_DIR))
+            if text:
+                print(json.dumps({"hookSpecificOutput": {
+                    "hookEventName": event, "additionalContext": text}}))
+        return
 
-    state_dir = os.path.join(root, ".claude", "context-guard")
-    memory_dir = os.path.join(root, ".claude", "compact-memory")
+    state_dir = os.path.join(root, GUARD_DIR, "state")
+    memory_dir = os.path.join(root, GUARD_DIR)
     state_path = os.path.join(state_dir, session_id + ".json")
     state = load_state(state_path)
     pending = [p for p in state.get("pending", []) if isinstance(p, str)]
@@ -325,9 +370,24 @@ def run(data):
     band = band_of(ctx)
     if band > int(state.get("band") or 0):
         note("soft" if band == 1 else "hard")
+    elif band < int(state.get("band") or 0):
+        # A compaction shrank the context; its size is no longer a reason to stop.
+        pending[:] = [p for p in pending if p not in ("soft", "hard")]
     state["band"] = band  # drops after a compaction, which re-arms the warnings
-    if ctx < COMPACT_AT:
-        state["prepped"] = False  # re-arm the pre-compaction handover
+    if ctx < int(state.get("prepped_at") or 0):
+        state["prepped_at"] = 0  # a compaction shrank the context: re-arm
+    handover_path = os.path.join(memory_dir, "latest.md")
+    estimate = ctx
+    if event == "PostToolUse":
+        estimate += output_chars(data.get("tool_response")) // CHARS_PER_TOKEN
+    prep = (0 < COMPACT_AT <= estimate and not state.get("prepped_at")
+            and not stands_down(root))
+
+    if prep and event in ("PostToolUse", "UserPromptSubmit"):
+        # Compaction can fire between tool calls, so this cannot wait for Stop.
+        output = {"hookSpecificOutput": {"hookEventName": event, "additionalContext":
+                                         prepare_for_compaction(estimate, handover_path, False)}}
+        state["prepped_at"] = max(ctx, 1)
 
     if event == "PostToolUse":
         if (data.get("tool_name") in ("Bash", "PowerShell") and ctx >= COMMIT_MIN_CTX
@@ -344,12 +404,11 @@ def run(data):
                 output = {"hookSpecificOutput": {"hookEventName": event, "additionalContext": text}}
 
     elif event == "Stop" and not data.get("stop_hook_active"):
-        handover_path = os.path.join(memory_dir, "latest.md")
-        if (0 < COMPACT_AT <= ctx and not state.get("prepped")
-                and not stands_down(root)):
+        if prep:
             # Pending stopping points wait for a later Stop.
-            output = {"decision": "block", "reason": prepare_for_compaction(ctx, handover_path)}
-            state["prepped"] = True
+            output = {"decision": "block",
+                      "reason": prepare_for_compaction(ctx, handover_path, True)}
+            state["prepped_at"] = max(ctx, 1)
         elif pending:
             reason = ask_user(ctx, pending, handover_path)
             output = {"decision": "block", "reason": reason}
