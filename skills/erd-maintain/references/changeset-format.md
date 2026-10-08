@@ -26,7 +26,10 @@ ops to `ERD.md`. Follow this structure exactly: column order and heading text ar
   `modifying`, `breaking` and `conflict` ops.
 - **Conflict ops** follow the existing rule: the latest stated decision wins, and DHS/state
   stakeholders win over vendor speculation. Every conflict op is paired with a `raise-question`
-  op that cites both sides, so the user can choose "ask instead of change".
+  op that cites both sides, so the user can choose "ask instead of change". Write
+  `Pairs with CS-<n>` in the question's Change cell (and `Pairs with CS-<m>` in the conflict's).
+  **A conflict-paired question is never auto-accepted** and is decided together with its conflict
+  op: accept one or the other, not both.
 - **Batching:** many `add-citation` ops may be combined into one row whose Target lists several
   IDs. This keeps the table readable.
 - **Decision column:** `pending` | `accepted` | `rejected: <reason>`. Only the orchestrator
@@ -57,8 +60,9 @@ ops to `ERD.md`. Follow this structure exactly: column order and heading text ar
 |---|---|---|---|---|---|---|---|---|
 | CS-1 | additive | add-entity | E-new-1 CCA Provider Capacity (`CCA_PROVIDER_CAPACITY`) | Licensed slots per provider per age group; fields: providerId FK→E-6, ageGroupId FK→E-new-2, licensedSlots Integer | [S5 slide 4] | — | High | pending |
 | CS-2 | modifying | modify-field | E-8.authorizedHoursPerWeek | Type Integer → Decimal(5,2) | [S4 @00:03:10] | [S3 @00:06:30] | High | pending |
-| CS-3 | conflict | modify-relationship | R-7 | … | [S4 @00:05:02] | [S3 @00:05:12] | Medium | pending |
-| CS-4 | additive | raise-question | Q-new-1 | Slide 6 shows a legacy data model image not extracted; confirm whether it adds entities | [S5 slide 6] | — | — | pending |
+| CS-3 | conflict | modify-relationship | R-7 | … Pairs with CS-4 | [S4 @00:05:02] | [S3 @00:05:12] | Medium | pending |
+| CS-4 | additive | raise-question | Q-new-1 | Ask instead of change: R-7 cardinality, citing both sides. Pairs with CS-3 | [S4 @00:05:02] [S3 @00:05:12] | — | — | pending |
+| CS-5 | additive | raise-question | Q-new-2 | Slide 6 shows a legacy data model image not extracted; confirm whether it adds entities | [S5 slide 6] | — | — | pending |
 
 ## Field detail
 (One `### CS-n` block for each add-entity, giving the full field table in erd-format columns. Omit this section if there are none.)

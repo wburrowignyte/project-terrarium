@@ -60,15 +60,23 @@ Don't commit a script; run the extraction inline:
 python3 -I - "<deck.pptx>" <<'PY'
 import sys
 from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
+VISUAL = (MSO_SHAPE_TYPE.PICTURE, MSO_SHAPE_TYPE.CHART, MSO_SHAPE_TYPE.GROUP)
 for k, slide in enumerate(Presentation(sys.argv[1]).slides, 1):
     title = slide.shapes.title.text_frame.text.strip() if slide.shapes.title is not None else ""
     print(f"## Slide {k}: {title or '(untitled)'}")
+    words = len(title.split())
     for sh in slide.shapes:
         if sh.has_text_frame and sh != slide.shapes.title:
             print(sh.text_frame.text)
+            words += len(sh.text_frame.text.split())
         if getattr(sh, "has_table", False) and sh.has_table:
             for row in sh.table.rows:
-                print(" | ".join(c.text for c in row.cells))
+                line = " | ".join(c.text for c in row.cells)
+                print(line)
+                words += len(line.split())
+    if words < 15 and any(sh.shape_type in VISUAL for sh in slide.shapes):
+        print("[visual content not extracted]")
     if slide.has_notes_slide:
         print(f"**Notes:** {slide.notes_slide.notes_text_frame.text}")
     print()
@@ -122,25 +130,34 @@ Global source registry for this ERD. IDs are permanent and never reused. Metadat
 | ID | Kind | Title | Date | Location | Fingerprint | Ingested | Staged file | Status |
 |---|---|---|---|---|---|---|---|---|
 | S1 | context-md | Glossary | — | docs/context/glossary.md | git:3f2a9c1 | 2026-10-01 | (in repo) | active |
-| S2 | transcript | Data workshop | 2026-09-15 | meeting-transcript:///events/… | event:AAMk…@2026-09-15T14:00Z | 2026-10-01 | S2-data-workshop.md | active |
+| S2 | transcript | Data workshop | 2026-09-15 | meeting-transcript:///events/…?start=2026-09-15T14:00Z&end=2026-09-15T15:00Z | event:AAMk…@2026-09-15T14:00Z | 2026-10-01 | S2-data-workshop.md | active |
 | S4 | slide-deck | Provider design review v1 | 2026-10-02 | file:///…/Provider%20review.pptx | mod:2026-10-02T09:10Z | 2026-10-03 | S4-provider-design-review.md | superseded by S5 |
 | S5 | slide-deck | Provider design review v2 | 2026-10-05 | file:///…/Provider%20review.pptx | mod:2026-10-05T16:22Z | 2026-10-08 | S5-provider-design-review.md | active |
 ```
 
 - **Kind:** `context-md` | `transcript` | `slide-deck` | `sharepoint-doc` | `local-file`.
-- **Fingerprint** (the prefix tells you how it was computed):
-  - `git:<blob>` for in-repo files: `git hash-object <path>`, first 7 characters.
+- **Fingerprint** (the prefix tells you how it was computed). The scheme depends on **how the
+  source was found**, not where the file lives:
+  - `git:<blob>` for every `context_paths` match: `git hash-object <path>`, first 7 characters.
+  - `sha256:<first 12 hex>` for **anything under `local_inputs`**, even if git tracks it: `sha256sum`.
   - `event:<eventId>@<occurrenceStart>` for Teams transcripts.
   - `mod:<lastModifiedDateTime>` for SharePoint items (from the search hit or `read_resource`).
-  - `sha256:<first 12 hex>` for local files: `sha256sum`.
 - **Ingested:** the run date that first staged this version of the source.
 - **Staged file:** relative to `<staging_dir>/<Ingested>/`, or `(in repo)` for context MDs.
 - **Status:** `active` | `superseded by S<m>`.
 - **Rows are sorted strictly by ID.**
+- **Location of a transcript** must include the occurrence window:
+  `meeting-transcript:///events/…?start=<iso>&end=<iso>`. Without it, every weekly occurrence of a
+  recurring series would match the previous row and wrongly supersede it.
 - **Matching:** a source is *known* if its **Location** is already in the ledger. If its
   Fingerprint matches the active row, it is unchanged. If the Fingerprint differs, it is *changed*:
   it gets a new ID, and the old row becomes `superseded by S<new>`.
 - **IDs are never reused**, even when superseded. Old citations to a superseded ID keep resolving.
+- **Staged text may be missing.** Staging is git-ignored and local, so `<staging_dir>/<Ingested>/<Staged file>`
+  won't exist on another machine or a fresh clone. Treat a missing staged file as a normal case: don't
+  fail and don't re-fetch. The citation stays recorded, and the agent notes `staged text unavailable for S<n>`.
+- **Re-staging a known source** (e.g. a full rebuild): leave its ledger row unchanged and stage into
+  the new run directory under the same `S<n>-<slug>.md` name.
 - **Never** put attendee names, content excerpts or staged text in the ledger.
 
 To allocate: take the next ID after the highest in the ledger. After staging, append the new rows

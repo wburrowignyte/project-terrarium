@@ -12,13 +12,14 @@ Watermark = the newest `Ingested` date in `<erd_dir>/sources.md`, minus `maintai
 ## 2. Scope of each search
 
 - **Meetings:** `outlook_calendar_search` per entry in `sharepoint.meeting_series`, with
-  `afterDateTime = watermark`. Read each event's transcript as in `source-gathering.md` §2.
+  `afterDateTime = watermark`. Read each event's transcript as in `source-gathering.md` §2. Compare each occurrence by its
+  Location **with the `?start=&end=` window**, so a new weekly occurrence is *new*, not *changed*.
 - **Slide decks:** `sharepoint_search` with `fileType` `pptx`, then `pdf`, narrowed by
   `sharepoint.deck_folders`. Keep a hit if its `lastModifiedDateTime` ≥ watermark.
 - **Docs:** the `sharepoint.doc_queries` searches, filtered by the same date.
 - **Local inputs:** **all** files under `local_inputs`, with no date filter. They are classified
-  by fingerprint.
-- **Context MDs:** all `context_paths` matches, classified by `git:` fingerprint.
+  by `sha256:` fingerprint, even if git tracks them.
+- **Context MDs:** all `context_paths` matches, classified by `git:` fingerprint (always, for `context_paths`).
 
 ## 3. Classify
 

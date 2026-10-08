@@ -68,12 +68,14 @@ If any check fails, send the agent back once with the specific problem.
 
 - Summarize by class: one line per op, with conflicts listing **both** sides (Evidence and
   Supersedes).
-- Pre-accept the classes in `maintain.auto_accept`.
+- Pre-accept the classes in `maintain.auto_accept`, **except** a `raise-question` marked
+  `Pairs with CS-<n>`: it waits for the decision on its conflict op.
 - Suggest accepting the additive ops. Modifying, breaking and conflict ops need an **explicit**
   choice.
 - Accept replies like `accept all`, `accept additive`, `accept CS-1,CS-4`, `reject CS-7: <reason>`.
   Ops not mentioned stay `pending`; ask about them before continuing.
-- For a conflict op, the user can pick its paired `raise-question` op instead.
+- For a conflict op, the user picks **one** of: accept the conflict op, or accept its paired
+  `raise-question` op instead (reject the other). Never apply both.
 - Write the Decision column and the `Decided` date into the change set yourself. This, plus the
   Status line in Step 7, is all you edit.
 - If nothing is accepted, stop. The change set (all rejected) and the ledger are the only outputs.

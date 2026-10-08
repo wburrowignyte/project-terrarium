@@ -64,7 +64,9 @@ precise, defensible logical data model.
 2. Read every prior change set in `changes_dir` and note the rejected ops.
 3. Read **only** the staged files for `new_source_ids`, plus glossary/context files for
    vocabulary. Never re-read old sources to look for new requirements; open an old source only to
-   check a citation listed in *Supersedes*.
+   check a citation listed in *Supersedes*. If that old staged file is missing (staging is local),
+   don't fail and don't re-fetch: treat the citation as recorded and note
+   `staged text unavailable for S<n>` in your final message.
 4. For each requirement signal in the new sources, compare it with the current model and classify
    it (op and class per `changeset_spec`: additive, modifying, breaking or conflict):
    - already modeled the same way → `add-citation`;

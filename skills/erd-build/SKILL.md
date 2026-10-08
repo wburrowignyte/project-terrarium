@@ -32,19 +32,24 @@ Let `RUN` = today's date (`YYYY-MM-DD`) and `STAGE` = `<staging_dir>/<RUN>`.
 
 ## Step 2: Gather and stage sources
 
-Follow `references/source-gathering.md` exactly:
-1. Discover candidates: context MD files, meeting transcripts, SharePoint docs, local inputs.
-2. **Gate A:** show the candidate table and get the user's confirmation or pruning.
-3. Read and stage the confirmed sources into `STAGE`, and write `STAGE/sources-manifest.md`.
-
-Allocate source IDs from the **source ledger** `<erd_dir>/sources.md` (IDs continue across runs), and after staging append and update the ledger rows. The ledger format and the
-matching rules are in `source-gathering.md`.
+**Before anything else, migrate if needed.** The ledger must exist before IDs are allocated, or
+allocation would start at S1 and collide with the existing citations.
 
 **Migration.** If `<erd_dir>/ERD.md` exists but `sources.md` doesn't:
 - find the newest `<staging_dir>/*/sources-manifest.md` and import its rows into a new ledger
   (Ingested = that folder's date; compute Fingerprints where possible, otherwise `unknown`);
 - if no manifest exists, warn that the existing citations can't be resolved, and ask whether to
   proceed with a full rebuild (citations will be regenerated).
+
+Follow `references/source-gathering.md` exactly:
+1. Discover candidates: context MD files, meeting transcripts, SharePoint docs, local inputs.
+2. **Gate A:** show the candidate table and get the user's confirmation or pruning.
+3. Read and stage the confirmed sources into `STAGE`, and write `STAGE/sources-manifest.md`.
+
+Allocate source IDs from the **source ledger** `<erd_dir>/sources.md` (IDs continue across runs), and after staging append and update the ledger rows. A source that is
+already *known* keeps its row unchanged and is staged into the new `STAGE` under the same
+`S<n>-<slug>.md` name. The ledger format and the
+matching rules are in `source-gathering.md`.
 
 If there are **no transcripts and no docs** (only context MDs), say so and ask whether to proceed.
 

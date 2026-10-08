@@ -13,7 +13,7 @@ still cheap to make.
 ## Inputs (given in your prompt)
 
 - `erd_path`: the `ERD.md` to review
-- `ledger_path`: the global `sources.md` (to check traceability). Resolve `<staging_dir>/<Ingested>/<Staged file>` to read a source and verify a claim.
+- `ledger_path`: the global `sources.md` (to check traceability). Resolve `<staging_dir>/<Ingested>/<Staged file>` to read a source and verify a claim. If the staged file is missing (staging is local), don't fail and don't re-fetch: treat the citation as recorded and note `staged text unavailable for S<n>` under the review's Traceability findings or questions.
 - `staging_dir`: the staging root
 - `checklist`: absolute path to `appian-risk-checklist.md`
 - `review_format`: absolute path to `review-format.md`, **your output contract**

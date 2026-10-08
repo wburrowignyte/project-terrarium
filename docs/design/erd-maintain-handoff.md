@@ -69,22 +69,29 @@ Global source registry for this ERD. IDs are permanent and never reused. Metadat
 | ID | Kind | Title | Date | Location | Fingerprint | Ingested | Staged file | Status |
 |---|---|---|---|---|---|---|---|---|
 | S1 | context-md | Glossary | — | docs/context/glossary.md | git:3f2a9c1 | 2026-10-01 | (in repo) | active |
-| S2 | transcript | Data workshop | 2026-09-15 | meeting-transcript:///events/… | event:AAMk…@2026-09-15T14:00Z | 2026-10-01 | S2-data-workshop.md | active |
+| S2 | transcript | Data workshop | 2026-09-15 | meeting-transcript:///events/…?start=2026-09-15T14:00Z&end=2026-09-15T15:00Z | event:AAMk…@2026-09-15T14:00Z | 2026-10-01 | S2-data-workshop.md | active |
 | S5 | slide-deck | Provider design review v2 | 2026-10-05 | file:///…/Provider%20review.pptx | mod:2026-10-05T16:22Z | 2026-10-08 | S5-provider-design-review.md | active |
 | S4 | slide-deck | Provider design review v1 | 2026-10-02 | file:///…/Provider%20review.pptx | mod:2026-10-02T09:10Z | 2026-10-03 | S4-provider-design-review.md | superseded by S5 |
 ```
 
 - **Kind:** `context-md` | `transcript` | `slide-deck` | `sharepoint-doc` | `local-file`.
-- **Fingerprint** (a prefix tells you how it was computed):
-  - `git:<blob>` for in-repo files: `git hash-object <path>`, first 7 characters.
+- **Fingerprint** (a prefix tells you how it was computed). The scheme depends on **how the source
+  was found**, not where the file lives:
+  - `git:<blob>` for every `context_paths` match: `git hash-object <path>`, first 7 characters.
   - `event:<eventId>@<occurrenceStart>` for Teams transcripts.
   - `mod:<lastModifiedDateTime>` for SharePoint items (from the search hit or `read_resource`).
-  - `sha256:<first 12 hex>` for local files: `sha256sum`.
+  - `sha256:<first 12 hex>` for anything under `local_inputs`, even if git tracks it: `sha256sum`.
 - **Ingested:** the `RUN` date that first staged this version of the source.
 - **Staged file:** relative to `<staging_dir>/<Ingested>/`, or `(in repo)` for context MDs.
 - **Status:** `active` | `superseded by S<m>`.
 - **Rows are ordered by ID.** The table above is out of order only to show the supersede row; in
   the real ledger, sort strictly by ID.
+- **Transcript Location** includes the occurrence window (`…?start=<iso>&end=<iso>`). Otherwise
+  each weekly occurrence of a recurring series would match, and wrongly supersede, the previous one.
+- **Staged text may be missing** (staging is local and git-ignored). Agents must not fail or
+  re-fetch: treat the citation as recorded and note `staged text unavailable for S<n>`.
+- **Re-staging a known source:** leave its ledger row unchanged; stage into the new RUN directory
+  under the same `S<n>-<slug>.md` name.
 - **Matching:** a source is *known* if its **Location** is already in the ledger. If its
   Fingerprint matches the active row, it is unchanged. If the Fingerprint differs, it is *changed*:
   it gets a new ID, and the old row becomes `superseded by S<new>`.
@@ -186,7 +193,8 @@ Bullets for content in the new sources that was deliberately not turned into ops
   `modifying`, `breaking` and `conflict` ops.
 - **Conflict ops** follow the existing rule: the latest stated decision wins, and DHS/state
   stakeholders win over vendor speculation. Every conflict op is paired with a `raise-question`
-  op that cites both sides, so the user can choose "ask instead of change".
+  op that cites both sides, so the user can choose "ask instead of change". The pair is marked `Pairs with CS-<n>` in the Change
+  cell; a conflict-paired question is never auto-accepted and is decided together with its conflict op (one or the other).
 - **Batching:** many `add-citation` ops may be combined into one row whose Target lists several
   IDs. This keeps the table readable.
 - **Decision column:** `pending` | `accepted` | `rejected: <reason>`. Only the orchestrator
@@ -537,4 +545,5 @@ commands below, then report honestly what you did and didn't verify.
 - Baseline ledger Locations are relative to the sample project (`docs/context/…`, `transcripts/…`); S3's fingerprint is `sha256:` because the transcript is a local file.
 - The baseline ERD has 14 entities and 18 relationships (including `County` and `Application Status` reference tables) so every FK has a Relationships row.
 - `README.md` fixture recipe (Task 8.6) was written with Task 7.
+- Review round 1 fixes: transcript Location carries the occurrence window; fingerprint scheme follows discovery path; missing staged files are tolerated; the pptx snippet prints `[visual content not extracted]`; conflict-paired questions are excluded from auto-accept; migration runs before ID allocation. §2.1 and §2.5 above were updated to match.
 - The deck's slide 5 title is "Provider identifiers", with the uniqueness rule only in the speaker notes.
