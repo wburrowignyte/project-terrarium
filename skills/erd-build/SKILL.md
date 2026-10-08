@@ -96,6 +96,7 @@ Report:
 - files written or changed (`ERD.md`, `sources.md`, review file(s)) as clickable links
 - the staging path (and a reminder that it's git-ignored and holds raw source text)
 - the open questions to take to the next stakeholder session
+- that `/project-terrarium:erd-view` renders the ERD as an interactive HTML diagram (offer to run it)
 
 Don't commit. Leave that to the user.
 

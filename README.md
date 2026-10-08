@@ -10,6 +10,9 @@ and receives the outputs.
 |---|---|---|
 | ERD build | `/project-terrarium:erd-build` | v0.2 |
 | ERD maintain | `/project-terrarium:erd-maintain` | v0.2 |
+| ERD view (ERD.md to interactive HTML) | `/project-terrarium:erd-view` | v0.1 |
+
+Status is the module's own version; the plugin version is in `.claude-plugin/plugin.json`.
 
 ## ERD build workflow
 
@@ -55,6 +58,20 @@ nothing is deleted (retired items are marked deprecated). If nothing is new, the
   (change sets). Neither may contain source text.
 - **Not committed:** `.project-terrarium/staging/`, which holds raw source text.
 - Not supported yet: audio/video transcription (drop a `.vtt` in `local_inputs`), OCR of image-only slides.
+
+## ERD viewer
+
+Large ERDs don't render well as a Mermaid block. `tools/erd-view/` turns `ERD.md` into one self-contained
+HTML file (no network, no dependencies, Node 18+) with pan/zoom, minimap, search by entity or column,
+filters by kind and sensitivity, an N-hop focus mode, a detail panel with fields and citations, and SVG/PNG export.
+
+```bash
+node tools/erd-view/erd-view.mjs path/to/erd/ERD.md        # writes path/to/erd/ERD.html
+node tools/erd-view/erd-view.mjs ERD.md -o out.html --open
+```
+
+Or run `/project-terrarium:erd-view`. `ERD.html` is git-ignored because it embeds the ERD text.
+Tests: `node --test "tools/erd-view/test/*.test.mjs"`.
 
 ## Install (in the project repo)
 
