@@ -79,7 +79,7 @@ function endCard(tok, side) {
 
 export function parseErd(md) {
   const warnings = [];
-  const model = { title: '', meta: {}, summary: '', entities: [], relationships: [], assumptions: [], questions: [], deferred: '', warnings };
+  const model = { title: '', meta: {}, summary: '', entities: [], relationships: [], assumptions: [], questions: [], deferred: '', changeLog: [], warnings };
   model.title = (md.match(/^# (.+)$/m) ?? [])[1]?.trim() ?? 'ERD';
 
   const h2 = Object.fromEntries(sections(md, 2).map((s) => [s.title.toLowerCase(), s.body]));
@@ -102,9 +102,11 @@ export function parseErd(md) {
       id: m[1], name: m[2], table: m[3],
       purpose: bullet(s.body, 'Purpose'), kind: bullet(s.body, 'Kind'), volume: bullet(s.body, 'Est\\. volume'),
       sensitivity: bullet(s.body, 'Sensitivity'), sources: bullet(s.body, 'Sources'),
+      deprecated: /^deprecated/i.test(bullet(s.body, 'Status')) ? bullet(s.body, 'Status') : '',
       fields: parseTable(s.body).map((r) => ({
         field: colKey(r, 'field'), column: stripTicks(colKey(r, 'column')), type: colKey(r, 'type'),
         req: /^y/i.test(colKey(r, 'req')), key: colKey(r, 'key'), description: colKey(r, 'description'), sources: colKey(r, 'sources'),
+        deprecated: /^deprecated/i.test(colKey(r, 'description')),
       })).filter((f) => f.column),
     };
     byId.set(e.id, e); byTable.set(e.table, e); model.entities.push(e);
@@ -124,7 +126,7 @@ export function parseErd(md) {
     if (!from || !to) { warnings.push(`${id}: cannot resolve entity in "${colKey(r, 'from')}" -> "${colKey(r, 'to')}"`); continue; }
     if (card === 'many-to-many') warnings.push(`${id}: many-to-many between ${from.table} and ${to.table} (contract requires a junction entity)`);
     model.relationships.push({
-      id, from: from.id, to: to.id, cardinality: card, fk: colKey(r, 'fk'), description: colKey(r, 'description'), sources: colKey(r, 'sources'), label: '',
+      id, from: from.id, to: to.id, cardinality: card, fk: colKey(r, 'fk'), description: colKey(r, 'description'), sources: colKey(r, 'sources'), label: '', deprecated: /^deprecated/i.test(colKey(r, 'description')),
     });
   }
 
@@ -164,6 +166,7 @@ export function parseErd(md) {
     const m = f.key.match(/FK→(E-\d+)/);
     if (m && !byId.has(m[1])) warnings.push(`${e.table}.${f.column}: FK targets unknown ${m[1]}`);
   }
+  model.changeLog = parseTable(find('change log')).filter((r) => Object.values(r).some(Boolean));
   for (const k of ['assumptions', 'questions']) {
     model[k] = parseTable(find(k === 'questions' ? 'open questions' : 'assumptions')).filter((r) => Object.values(r).some(Boolean));
   }

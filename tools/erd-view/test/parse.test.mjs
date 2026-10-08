@@ -72,3 +72,18 @@ test('large ERD parses quickly and completely', () => {
   assert.equal(m.relationships.length, relationships);
   assert.ok(Date.now() - t < 2000);
 });
+
+test('deprecation and change log are parsed', () => {
+  const md = fixture.replace('- **Sensitivity:** None\n- **Sources:** [S1 §Household]', '- **Sensitivity:** None\n- **Status:** Deprecated in v2: merged into X [S1 §Household]\n- **Sources:** [S1 §Household]') + '\n## Change log\n| Version | Date | Change set | Summary |\n|---|---|---|---|\n| 1 | 2026-09-20 | full build | Initial |\n';
+  const m = parseErd(md);
+  assert.match(m.entities.find((e) => e.id === 'E-1').deprecated, /^Deprecated in v2/);
+  assert.equal(m.changeLog.length, 1);
+  assert.equal(m.entities.find((e) => e.id === 'E-2').deprecated, '');
+});
+
+test('baseline fixture (maintained ERD) parses completely', () => {
+  const m = parseErd(readFileSync(fileURLToPath(new URL('../../../examples/fixtures/baseline/ERD.md', import.meta.url)), 'utf8'));
+  assert.equal(m.entities.length, 14);
+  assert.equal(m.relationships.length, 18);
+  assert.deepEqual(m.warnings, []);
+});

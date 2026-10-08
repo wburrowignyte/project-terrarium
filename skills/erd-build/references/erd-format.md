@@ -1,7 +1,7 @@
 # ERD.md format (the contract)
 
 `ERD.md` is the canonical, git-tracked data model for the project. The `erd-analyst` writes it,
-the `appian-erd-reviewer` reads it, and future maintenance runs diff against it. Follow this
+the `appian-erd-reviewer` reads it, and `erd-maintain` diffs new sources against it and edits it only through accepted change sets. Follow this
 structure exactly: section order, heading text, and table columns are what later runs parse.
 
 ## Rules
@@ -9,15 +9,42 @@ structure exactly: section order, heading text, and table columns are what later
 - **Logical model, Appian-shaped.** Model entities as they will become Appian record types
   backed by database tables. Follow the naming conventions below.
 - **Every entity, field, and relationship carries a citation.** A citation is a source id from
-  `sources-manifest.md` plus a locator, e.g. `[S3 @00:14:32]` (transcript timestamp) or
-  `[S1 §Eligibility]` (doc section). Multiple citations are space-separated.
+  the source ledger (`sources.md`, next to `ERD.md`) plus a locator. Citations resolve against the
+  ledger, never against a per-run manifest. Multiple citations are space-separated. Source IDs are
+  permanent: a superseded source keeps its ID, so old citations stay valid.
 - **No citation means it's an assumption.** If you add something the sources don't support
   (audit fields, a reference table implied by "status"), cite `ASSUMPTION` and list it under
   *Assumptions*. Standard platform fields (`id`, audit fields) may cite `CONVENTION`.
 - **Never put PII/PHI values in the ERD.** Describe fields (e.g. "client SSN"), never example
   data from transcripts.
+- **Never delete; deprecate.** Retired entities, fields, relationships, assumptions and questions
+  stay in the document and are marked per *Deprecation* below.
 - **Stable IDs.** Each entity has an ID `E-<n>`, each relationship `R-<n>`, each question
   `Q-<n>`, each assumption `A-<n>`. Never renumber existing IDs; append new ones.
+
+## Citation forms
+
+| Form | Used for |
+|---|---|
+| `[S<n> @HH:MM:SS]` | transcript, by timestamp |
+| `[S<n> §Section]` | document, by section |
+| `[S<n> slide <k>]` | slide deck, by 1-based slide number |
+| `ASSUMPTION` / `CONVENTION` | no source (see above) |
+
+## Deprecation
+
+Nothing is ever deleted.
+
+- **Entity:** keep its section. Add the bullet `- **Status:** Deprecated in v<n>: <reason> [cite]`
+  under Sources. Remove it from the Mermaid diagram. Add a bullet to *Out of scope / deferred*.
+- **Field:** keep the row. Set Req to `—` and prefix the Description with `DEPRECATED v<n>:`.
+  Remove it from the Mermaid entity block.
+- **Relationship:** keep the row. Prefix its Description with `DEPRECATED v<n>:`. Remove it from
+  Mermaid.
+- **Assumption confirmed by a source:** keep the `A-n` row. Append ` — confirmed [S<n> …] v<n>`
+  to *Why*. Replace `ASSUMPTION` with the source citation on the affected elements.
+- **Question resolved:** keep the `Q-n` row. Append ` — **Resolved v<n>:** <answer> [S<n> …]` to
+  the Question cell.
 
 ## Naming conventions
 
@@ -45,7 +72,7 @@ Field types: use Appian types: `Integer`, `Decimal`, `Text`, `Extra Long Text`, 
 | Last updated | <YYYY-MM-DD> |
 | Application prefix | <PREFIX> |
 | Target database | <Oracle / MySQL / SQL Server / PostgreSQL / unknown> |
-| Sources | See `sources-manifest.md` for run <YYYY-MM-DD> (S1–S<n>) |
+| Sources | See `sources.md` (S1–S<n>) |
 | Status | Draft / Reviewed: <verdict> |
 
 ## Summary
@@ -106,4 +133,12 @@ Bullets for concepts heard in the sources but deliberately not modeled, with the
 (Added only after an Appian architecture review. One row per finding sent back.)
 | Finding | Response | Change made |
 |---|---|---|
+
+## Change log
+| Version | Date | Change set | Summary |
+|---|---|---|---|
+| 3 | 2026-10-08 | changes/2026-10-08-changeset.md (CS-1–CS-9; 7 accepted) | +E-12 Provider Capacity; authorizedHours → Decimal; Q-2 resolved |
+
+(Every write adds one row. `erd-build` writes Change set `full build`; revise mode writes
+`review <file>`; `erd-maintain` apply writes the change set path and accepted count.)
 ````

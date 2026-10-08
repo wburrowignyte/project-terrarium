@@ -68,6 +68,7 @@ td.mono,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;f
     <select id="hops"><option value="1">Selected + 1 hop</option><option value="2">Selected + 2 hops</option><option value="3">Selected + 3 hops</option></select>
     <div style="margin-top:6px;display:flex;gap:6px"><button class="btn" id="focusbtn">Focus selected</button><button class="btn" id="showall">Show all</button></div>
     <label class="row" style="margin-top:10px"><input type="checkbox" id="isolated" checked> Show entities with no relationships</label>
+    <label class="row" id="deprow"><input type="checkbox" id="deprecated" checked> Show deprecated <small id="depn" style="color:var(--muted)"></small></label>
   </aside>
   <div id="stage" class="page-diagram">
     <svg id="svg" role="img" aria-label="Entity relationship diagram"><g id="vp"></g></svg>
@@ -107,7 +108,7 @@ const sensOf = (e) => { const m = (e.sensitivity || '').match(/PHI|PII|FTI|CJI/g
 const SENS = ['PHI', 'PII', 'FTI', 'CJI'];
 
 /* ---------- state ---------- */
-const state = { kinds: new Set(), sens: new Set(), fieldMode: ents.length > 40 ? 'keys' : 'all', selected: null, focus: null, matches: new Set(), showIsolated: true, tx: 0, ty: 0, k: 1 };
+const state = { kinds: new Set(), sens: new Set(), fieldMode: ents.length > 40 ? 'keys' : 'all', selected: null, focus: null, matches: new Set(), showIsolated: true, showDeprecated: true, tx: 0, ty: 0, k: 1 };
 const allKinds = [...new Set(ents.map(kindOf))];
 allKinds.forEach((k) => state.kinds.add(k));
 SENS.concat(['None']).forEach((s) => state.sens.add(s));
@@ -130,6 +131,7 @@ $('#page-questions').innerHTML = `<h2>Open questions</h2>${tableHtml(MODEL.quest
 $('#page-assumptions').innerHTML = `<h2>Assumptions</h2>${tableHtml(MODEL.assumptions, 'None recorded.')}`;
 $('#page-notes').innerHTML = `<h2>Summary</h2><p>${esc(MODEL.summary) || '<span class="empty">None.</span>'}</p>` +
   `<h2>Parser warnings</h2>${MODEL.warnings.length ? `<ul class="warnlist">${MODEL.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : '<p class="empty">None.</p>'}` +
+  (MODEL.changeLog.length ? `<h2>Change log</h2>${tableHtml(MODEL.changeLog, '')}` : '') +
   (MODEL.deferred ? `<h2>Out of scope / deferred</h2><pre style="white-space:pre-wrap;font:inherit">${esc(MODEL.deferred)}</pre>` : '');
 function showTab(id) {
   document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', t.dataset.tab === id));
@@ -146,6 +148,9 @@ $('#sens').innerHTML = SENS.concat(['None']).map((s) => `<label class="row"><inp
 $('#kinds').addEventListener('change', (e) => { const k = e.target.dataset.kind; e.target.checked ? state.kinds.add(k) : state.kinds.delete(k); rebuild(true); });
 $('#sens').addEventListener('change', (e) => { const k = e.target.dataset.sens; e.target.checked ? state.sens.add(k) : state.sens.delete(k); rebuild(true); });
 $('#fieldmode').addEventListener('change', (e) => { state.fieldMode = e.target.value; rebuild(true); });
+const depCount = ents.filter((e) => e.deprecated).length;
+if (!depCount) $('#deprow').style.display = 'none'; else $('#depn').textContent = depCount;
+$('#deprecated').addEventListener('change', (e) => { state.showDeprecated = e.target.checked; rebuild(true); });
 $('#isolated').addEventListener('change', (e) => { state.showIsolated = e.target.checked; rebuild(true); });
 $('#focusbtn').addEventListener('click', () => { if (state.selected) { state.focus = { id: state.selected, hops: +$('#hops').value }; rebuild(true); } });
 $('#showall').addEventListener('click', () => { state.focus = null; rebuild(true); });
@@ -162,6 +167,7 @@ function visibleSet() {
       if (!state.kinds.has(kindOf(e))) return false;
       const s = sensOf(e); if (!(s.length ? s.some((x) => state.sens.has(x)) : state.sens.has('None'))) return false;
     }
+    if (!state.showDeprecated && e.deprecated && id !== state.selected) return false;
     if (!state.showIsolated && !state.focus && nbrs.get(id).size === 0) return false;
     return true;
   }));
@@ -337,7 +343,7 @@ function draw(nodes, edges, nmap) {
     const g = el('g', { 'data-r': e.id }, edgeLayer);
     el('path', { d: edgePath(e), fill: 'none', stroke: 'transparent', 'stroke-width': 10 }, g).style.cursor = 'pointer';
     const line = el('path', { d: edgePath(e), fill: 'none', stroke: css('--edge'), 'stroke-width': 1.3 }, g);
-    if (e.cardinality === 'many-to-many') line.setAttribute('stroke-dasharray', '5 3');
+    if (e.cardinality === 'many-to-many' || e.deprecated) line.setAttribute('stroke-dasharray', '5 3');
     const cMany = e.cardinality !== 'one-to-one';
     const m = el('path', { d: markerPath(e._c, cMany ? 'many' : 'one') + markerPath(e._p, 'one'), fill: 'none', stroke: css('--edge'), 'stroke-width': 1.3 }, g);
     const child = byId.get(e.from), fkf = child.fields.find((f) => f.field === e.fk || f.column === e.fk);
@@ -353,11 +359,12 @@ function draw(nodes, edges, nmap) {
     const e = n.e, kc = css(kindVar[kindOf(e)]);
     const g = el('g', { transform: `translate(${n.x},${n.y})`, 'data-id': e.id }, nodeLayer); g.style.cursor = 'pointer';
     const box = el('rect', { width: n.w, height: n.h, rx: 7, fill: css('--node'), stroke: css('--node-border'), 'stroke-width': 1.2 }, g);
+    if (e.deprecated) box.setAttribute('stroke-dasharray', '5 3');
     el('path', { d: `M0,7a7,7 0 0 1 7,-7h${n.w - 14}a7,7 0 0 1 7,7v${HEAD - 7}h-${n.w}z`, fill: kc, opacity: 0.16 }, g);
     el('rect', { width: 4, height: HEAD, fill: kc, rx: 2 }, g);
     const title = el('text', { x: 12, y: 15, 'font-size': 12, 'font-weight': 600, fill: css('--text'), 'font-family': 'system-ui,sans-serif' }, g); title.textContent = e.table;
     const sub = el('text', { x: 12, y: 28, 'font-size': 9.5, fill: css('--muted'), 'font-family': 'system-ui,sans-serif' }, g);
-    sub.textContent = `${e.id} · ${kindOf(e)}${e.volume && e.volume !== 'unknown' ? ' · ' + e.volume : ''}`;
+    sub.textContent = `${e.id} · ${e.deprecated ? 'DEPRECATED · ' : ''}${kindOf(e)}${e.volume && e.volume !== 'unknown' ? ' · ' + e.volume : ''}`;
     const sens = sensOf(e);
     if (sens.length) { const bw = 8 + sens.join('/').length * 6; el('rect', { x: n.w - bw - 8, y: 7, width: bw, height: 15, rx: 4, fill: css('--warn') }, g); const t = el('text', { x: n.w - bw / 2 - 8, y: 18, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 700, fill: '#fff', 'font-family': 'system-ui,sans-serif' }, g); t.textContent = sens.join('/'); }
     const fg = el('g', { class: 'fields' }, g);
@@ -482,6 +489,7 @@ function renderDetail() {
   }).join('');
   d.innerHTML = `<h2>${esc(e.name)}</h2><div class="sub mono">${esc(e.table)} · ${esc(e.id)}</div>
   ${sens.map((s) => `<span class="badge ${s}">${s}</span>`).join(' ')}
+  ${e.deprecated ? `<p><span class="badge" style="background:var(--warn);color:#fff">DEPRECATED</span> ${esc(e.deprecated.replace(/^deprecated\s*/i, ''))}</p>` : ''}
   <p>${esc(e.purpose)}</p>
   <dl><dt>Kind</dt><dd>${esc(e.kind || '—')}</dd><dt>Volume</dt><dd>${esc(e.volume || '—')}</dd><dt>Sensitivity</dt><dd>${esc(e.sensitivity || '—')}</dd><dt>Sources</dt><dd>${esc(e.sources || '—')}</dd></dl>
   <h3>Relationships (${relsOf.get(id).length})</h3>${rl ? `<table>${rl}</table>` : '<p class="empty">None.</p>'}

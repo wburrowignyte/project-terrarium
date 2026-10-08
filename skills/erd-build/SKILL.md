@@ -32,28 +32,42 @@ Let `RUN` = today's date (`YYYY-MM-DD`) and `STAGE` = `<staging_dir>/<RUN>`.
 
 ## Step 2: Gather and stage sources
 
+**Before anything else, migrate if needed.** The ledger must exist before IDs are allocated, or
+allocation would start at S1 and collide with the existing citations.
+
+**Migration.** If `<erd_dir>/ERD.md` exists but `sources.md` doesn't:
+- find the newest `<staging_dir>/*/sources-manifest.md` and import its rows into a new ledger
+  (Ingested = that folder's date; compute Fingerprints where possible, otherwise `unknown`);
+- if no manifest exists, warn that the existing citations can't be resolved, and ask whether to
+  proceed with a full rebuild (citations will be regenerated).
+
 Follow `references/source-gathering.md` exactly:
 1. Discover candidates: context MD files, meeting transcripts, SharePoint docs, local inputs.
 2. **Gate A:** show the candidate table and get the user's confirmation or pruning.
 3. Read and stage the confirmed sources into `STAGE`, and write `STAGE/sources-manifest.md`.
+
+Allocate source IDs from the **source ledger** `<erd_dir>/sources.md` (IDs continue across runs), and after staging append and update the ledger rows. A source that is
+already *known* keeps its row unchanged and is staged into the new `STAGE` under the same
+`S<n>-<slug>.md` name. The ledger format and the
+matching rules are in `source-gathering.md`.
 
 If there are **no transcripts and no docs** (only context MDs), say so and ask whether to proceed.
 
 ## Step 3: Agent 1, erd-analyst (build)
 
 Launch the `erd-analyst` subagent (foreground; you need its result). The prompt must include:
-`mode: build`, `staging_dir: STAGE`, `manifest`, `erd_path: <erd_dir>/ERD.md`, `format_spec`
+`mode: build`, `staging_dir: STAGE`, `manifest`, `ledger_path: <erd_dir>/sources.md`, `erd_path: <erd_dir>/ERD.md`, `format_spec`
 (absolute), the `project` block, and any focus from `$ARGUMENTS`. If `ERD.md` already exists, tell it
 to preserve IDs and increment the version.
 
 When it returns, verify that `ERD.md` exists and has the required sections. Check that
-every `[S<n>` citation resolves to the manifest: grep for citations and compare them with the
-manifest IDs. If either check fails, send the agent back once with the specific problem.
+every `[S<n>` citation resolves to the ledger: grep for citations and compare them with the
+ledger IDs. If either check fails, send the agent back once with the specific problem.
 
 ## Step 4: Agent 2, appian-erd-reviewer
 
-Launch the `appian-erd-reviewer` subagent with: `erd_path`, `manifest_path`, `checklist` and
-`review_format` (absolute), the `project` block, and `round: 1`.
+Launch the `appian-erd-reviewer` subagent with: `erd_path`, `ledger_path`, `staging_dir`, `scope: full`, `checklist`
+and `review_format` (absolute), the `project` block, and `round: 1`.
 
 Save its final message **verbatim** to `<erd_dir>/reviews/<RUN>-appian-review.md` (append `-r2`
 for round 2). Then set the ERD header's `Status` line to `Reviewed: <verdict>`. That one-line
@@ -79,7 +93,7 @@ Then:
 ## Step 6: Finish
 
 Report:
-- files written or changed (`ERD.md`, review file(s)) as clickable links
+- files written or changed (`ERD.md`, `sources.md`, review file(s)) as clickable links
 - the staging path (and a reminder that it's git-ignored and holds raw source text)
 - the open questions to take to the next stakeholder session
 - that `/project-terrarium:erd-view` renders the ERD as an interactive HTML diagram (offer to run it)

@@ -8,9 +8,9 @@ and receives the outputs.
 
 | Module | Command | Status |
 |---|---|---|
-| ERD build | `/project-terrarium:erd-build` | v0.1 |
+| ERD build | `/project-terrarium:erd-build` | v0.2 |
+| ERD maintain | `/project-terrarium:erd-maintain` | v0.2 |
 | ERD view (ERD.md to interactive HTML) | `/project-terrarium:erd-view` | v0.1 |
-| ERD maintain (diff new meetings against the ERD) | — | planned |
 
 ## ERD build workflow
 
@@ -37,7 +37,25 @@ The reviewer works from [appian-risk-checklist.md](skills/erd-build/references/a
 
 All Microsoft 365 access is read-only. Raw source text is staged under `.project-terrarium/staging/`,
 which is git-ignored because DHS transcripts may contain PII/PHI. Every ERD element cites its source
-(`[S2 @00:14:32]`), which is what makes the planned maintenance module possible.
+(`[S2 @00:14:32]`, `[S5 slide 4]`), which is what makes incremental maintenance possible.
+
+## ERD maintain workflow
+
+```
+discover new/changed ─► Gate A ─► stage ─► erd-analyst ─► change set ─► Gate C ─► erd-analyst ─► appian-erd-reviewer ─► Gate B
+(since the ledger       confirm   (new     (maintain)    erd/changes/   accept/   (apply,        (scope: delta)          (as in build)
+ watermark)             sources   S-IDs)                 <RUN>-…        reject    Version+1)
+```
+
+New and changed sources (meeting transcripts, `.pptx`/`.pdf` slide decks, SharePoint docs) are
+found by comparing against the source ledger. The analyst proposes a **change set** (additive /
+modifying / breaking / conflict ops); only the ops you accept are applied, IDs stay stable, and
+nothing is deleted (retired items are marked deprecated). If nothing is new, the run writes nothing.
+
+- **Committed:** `erd/sources.md` (the global source ledger, metadata only) and `erd/changes/`
+  (change sets). Neither may contain source text.
+- **Not committed:** `.project-terrarium/staging/`, which holds raw source text.
+- Not supported yet: audio/video transcription (drop a `.vtt` in `local_inputs`), OCR of image-only slides.
 
 ## ERD viewer
 
@@ -76,3 +94,10 @@ Prerequisites: the Microsoft 365 connector (for Teams/SharePoint). The Appian do
   Run `claude --plugin-dir <this repo>` from inside it, then `/project-terrarium:erd-build`.
 - `examples/fixtures/flawed-ERD.md` is an ERD with 6 seeded defects (listed in its header comment) for
   testing the reviewer on its own.
+- **Maintain fixtures:** `examples/fixtures/baseline/` holds a clean v1 `ERD.md` and its `sources.md`.
+  `examples/sample-project/transcripts/` has a follow-up transcript and a 5-slide deck that should
+  produce the ops listed in `examples/fixtures/maintain-expected.md`. To test:
+  1. copy `examples/fixtures/baseline/{ERD.md,sources.md}` into `examples/sample-project/erd/`
+  2. from `examples/sample-project`, run `claude --plugin-dir ../..`
+  3. run `/project-terrarium:erd-maintain`
+  4. compare the change set with `maintain-expected.md`

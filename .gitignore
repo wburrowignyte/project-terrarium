@@ -2,4 +2,6 @@
 .project-terrarium/inputs/
 examples/sample-project/erd/ERD.md
 examples/sample-project/erd/reviews/*.md
+examples/sample-project/erd/sources.md
+examples/sample-project/erd/changes/
 **/erd/ERD.html

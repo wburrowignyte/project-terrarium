@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "ignyte-dev": {
+      "source": {
+        "source": "github",
+        "repo": "wburrowignyte/isdc"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "context-guard@ignyte-dev": true
+  }
+}
