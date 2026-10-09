@@ -1,5 +1,7 @@
 # ERD maintain module — design
 
+> **Note (2026-10-09):** Transcript sourcing superseded by `sharepoint-transcripts-handoff.md` (issue #5): the calendar/`meetingTranscriptUrl` path and `event:` fingerprints were removed.
+
 ## Context
 `project-terrarium` is a Claude Code plugin made only of prompts. Module 1 (`/project-terrarium:erd-build`) gathers sources (Teams transcripts, SharePoint docs, context MD) into a git-ignored staging dir and has `erd-analyst` write a cited `erd/ERD.md` per `skills/erd-build/references/erd-format.md`. Then `appian-erd-reviewer` reviews it. The README lists "ERD maintain (diff new meetings against the ERD)" as planned. Today the only incremental behaviour is "preserve IDs, increment Version" on a full rebuild.
 

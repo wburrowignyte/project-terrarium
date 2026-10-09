@@ -10,8 +10,8 @@ context_paths:
   - "docs/context/**/*.md"
 
 sharepoint:
-  meeting_series: []        # empty: the sample uses local transcripts only
-  transcript_folders: []
+  transcript_folders: []    # empty: the sample uses local transcripts only
+  transcript_queries: []
   folders: []
   doc_queries: []
 

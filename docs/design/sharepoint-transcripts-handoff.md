@@ -173,3 +173,73 @@ and this handoff.
 
 ## Implementation notes
 (Builder: record decisions, connector findings from §7.1, and deviations here.)
+
+**Connector findings (§7.1), 2026-10-09.** Run against one client engagement folder (`<client folder>`)
+only; formats recorded, no content kept.
+- `sharepoint_search` / `sharepoint_folder_search` / `read_resource` match the §2 signatures.
+- `sharepoint_folder_search` **returns files as well as folders** when names match, so step 1 of
+  discovery now keeps only folder hits. `sharepoint_search(folderName=…)` is a **partial name match
+  and leaked a hit from another library** (an unrelated proposals library); discovery now checks each hit's `webUrl`
+  against the resolved folder path.
+- Real transcripts are `.docx`, saved in per-meeting subfolders (e.g. `<phase>/<n>. <Topic>_<MMDDYYYY>/`),
+  named like `…_Transcript_10072026.docx`. That is not Teams' default name, so date parsing also accepts `MMDDYYYY` after `_`.
+- A `.docx` read returns **flattened text** with sparse line breaks: a title/duration header, then
+  `<Speaker>   <H:MM:SS or M:SS>  <text>` runs. Timestamps are unpadded (`0:09`, `1:02:07`). The footer was
+  `[pages 1–1 of 53]` with `endPage` set (a 1.5 h meeting is about 53 pages). Staging therefore splits on speaker/timestamp
+  markers and zero-pads to `[HH:MM:SS]`; checked on a synthetic string only.
+- **No `.vtt` or `.txt` exists in the folder, so the `.vtt` read behaviour is unverified.** The spec's
+  conservative rule (try one read, else list under Not included) is in place. The `Recordings` folder listing was empty.
+
+**Verification.** `claude plugin validate .` passes. Final grep hits only the alias text, the legacy-row
+rule, the superseded notes and the historical design docs. An end-to-end `/project-terrarium:erd-build` on a
+copy of the sample project completed with local transcripts only: 66 `[S3/S4 @HH:MM:SS]` citations, no
+calendar call, no deprecation warning.
+
+§7.4 maintain (scratch copy of the sample project with `baseline/`, no remote calls): finds S4 and S5 as new
+and S1–S3 as known. The change set covers every op in `maintain-expected.md` (class, op and target match).
+It also adds a shared `CCA_LOOKUP` table for the age-group reference, per the current LOOKUP convention. A re-run with
+no changes writes nothing (`ERD.md` and `sources.md` byte-identical). The `maintain` run auto-rejected one optional
+`raise-question` op despite the auto-accept prompt; this is an LLM judgment call, not a spec issue.
+
+§7.5 legacy ledger (same setup plus an `S4` row with a `meeting-transcript:///` Location and an `event:` fingerprint):
+the row is kept byte-for-byte, isn't re-read ("S4 was not re-read; legacy-format row"), no calendar call is made, and
+the new sources get S5/S6. The relocation **offer** couldn't be exercised, because it needs a matching SharePoint
+hit and the scratch config has no remote sources.
+
+§7.3 deprecation (scratch copy of the sample config with `meeting_series: ["Data Workshop"]`, maintain run, no remote
+calls): the run printed "`sharepoint.meeting_series` is deprecated; rename it to `transcript_queries`" exactly once.
+That the entries are then used as queries couldn't be observed, because remote calls were disabled. The repo's sample
+config was not modified.
+
+**Not run:** the relocation offer in §7.5, the alias-as-query behaviour in §7.3, and a live build against the SharePoint folder.
+
+**Deviations / follow-ups.**
+- `docs/TECH_DEBT.md` is not on `dev`; TD-1 not updated.
+- Remove the `meeting_series` alias in the next minor version.
+- Plugin version bumped 0.4.0 → 0.5.0.
+
+**Live discovery dry run (stopped at Gate A, 2026-10-09).** Scoped to `<client folder>`;
+no transcript content read. Findings:
+- **Search recall is unreliable.** Repeating `sharepoint_search(query="transcript", fileType=docx, folderName=<folder>)`
+  returned different sets on different calls (totals 18, then 14), and the 14-hit run missed real transcripts.
+  `query="started transcription"` (scoped to the phase folder) found 5 of the 7 known transcripts. One more
+  (a `<meeting>_Transcription.docx` of several MB) appeared **only** in a folder listing via `read_resource`.
+  Search alone can miss transcripts; consider also listing each resolved `transcript_folders` folder (and its subfolders)
+  with `read_resource` as a second discovery pass. **Not yet in the spec; needs a decision.**
+- `folderName` filters leak: hits from another library and from `Shared Documents/Forms/…` came back; all were dropped by the `webUrl` check.
+- Transcripts are named inconsistently (`…_Transcript_<MMDDYYYY>`, `…_transcript_<MMDDYYYY>`, `…_<MMDDYYYY>`, no date, `…_Transcription.docx`),
+  so date parsing falls back to the `Meeting Recording` header date or `lastModifiedDateTime` fairly often.
+
+**Spec change after the dry run.** `source-gathering.md` §2 step 2 and `delta-discovery.md` §2 now add a
+folder **listing pass** (recursive, 3 levels) merged with the search hits by URI. Listings carry no modified date,
+so it is looked up with a name search, and the watermark is applied after merging. Listed `.docx` files without a
+transcript marker in the name show as "unclassified" at Gate A. Not yet run live.
+
+**Live listing and read (2026-10-09).** Listing the phase folder with `read_resource` shows subfolders as
+`<name> (folder, <bytes> bytes) <uri>` and files as `(file, <bytes> bytes) <uri>`, and it also lists `.pptx`, `.xlsx`
+and `.eml` files, so the extension filter and the "unclassified" rule are needed. Real speaker labels include
+`Last, First M (ORG)`, not only `First Last`; `source-gathering.md` now says to anchor on the timestamp marker and not
+assume `First Last`. A child `claude -p` session has no Microsoft 365 connector (`enabledInChat: false`), so a live
+`erd-build` can't run unattended; discovery and reads were driven from the main session. The `.docx` normalizer and the
+sample build were **not** run against real content (the sandbox blocked staging client text), so the `.docx` staging
+format is verified by reading only. The temporary raw excerpt was deleted.

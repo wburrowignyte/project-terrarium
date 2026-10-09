@@ -11,9 +11,20 @@ Watermark = the newest `Ingested` date in `<erd_dir>/sources.md`, minus `maintai
 
 ## 2. Scope of each search
 
-- **Meetings:** `outlook_calendar_search` per entry in `sharepoint.meeting_series`, with
-  `afterDateTime = watermark`. Read each event's transcript as in `source-gathering.md` §2. Compare each occurrence by its
-  Location **with the `?start=&end=` window**, so a new weekly occurrence is *new*, not *changed*.
+- **Transcripts:** the `source-gathering.md` §2 searches, with `afterDateTime = watermark`, **plus its
+  listing pass** over each transcript folder. A listing can't be date-filtered, so apply the watermark
+  after merging: keep a listed file if it's not in the ledger, if its `lastModifiedDateTime` ≥ watermark, or if its
+  modified date is **unknown** (keep it and show it at Gate A as "date unknown"). In a maintain run the date
+  is needed even for ledger-known files, because it is how a *changed* file is detected. To keep the cost
+  down, run **one** `sharepoint_search` per folder first, with `afterDateTime = watermark`, `fileType` `docx`,
+  and the project name as the `query`. Search recall is unreliable, so if that search returns no hits, or
+  fewer hits than a quarter of the listed `.docx`/`.txt` files, don't trust it: do the by-name lookup for
+  every listed file instead. A listed file
+  that appears in those results has its date. Look up by name only the listed files that did not appear;
+  a listed file that is in the ledger and did not appear in those results was not modified since the
+  watermark, so it can be skipped without a lookup.
+  Classification is by Location (`file:///…`) and `mod:` fingerprint, like any SharePoint item. An
+  edited transcript file (new `mod:`) is **changed** and supersedes the old row as usual.
 - **Slide decks:** `sharepoint_search` with `fileType` `pptx`, then `pdf`, narrowed by
   `sharepoint.deck_folders`. Keep a hit if its `lastModifiedDateTime` ≥ watermark.
 - **Docs:** the `sharepoint.doc_queries` searches, filtered by the same date.
@@ -29,15 +40,18 @@ Compare each hit with the ledger using the matching rules in `source-gathering.m
 - **new:** its Location isn't in the ledger.
 - **changed:** its Location is in the ledger and the Fingerprint differs from the active row.
 - **known:** same Location, same Fingerprint.
+- **Legacy-row relocation:** a transcript hit whose title and meeting date match a legacy
+  `meeting-transcript:///` / `event:` row is offered at Gate A as "probably already ingested as
+  S<n>". See *Legacy rows* in `source-gathering.md`. Never re-read a `meeting-transcript:///` Location.
 
 Show **new** and **changed** hits at Gate A. Drop **known** hits silently; report only a count.
 
 ## 4. Recordings
 
 Never try to transcribe audio or video.
-- A calendar event with no `meetingTranscriptUrl` goes under "Not included: no transcript; enable
-  Teams transcription or drop a `.vtt` in `<local_inputs>`".
-- So do `.mp4` and `.m4a` files found by search or in `local_inputs`.
+- A recording (`.mp4`/`.m4a`) with no transcript file goes under "Not included: download the
+  transcript from Teams to `<transcript folder>` or drop it in `<local_inputs>`".
+- So do `.mp4` and `.m4a` files found in a folder listing or in `local_inputs`.
 
 ## 5. Nothing new
 

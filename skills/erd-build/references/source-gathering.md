@@ -15,25 +15,72 @@ reference**: record their repo-relative paths in the manifest and don't copy the
 already under git. Glossary or domain files (`CONTEXT.md`, `glossary.md`, `domain*.md`) go first,
 since they define the vocabulary the ERD should use.
 
-## 2. Teams meeting transcripts (primary path)
+## 2. Meeting transcripts (SharePoint files)
 
-Transcripts are reached through the meeting's **calendar event**, not as files:
+Transcripts are **files in SharePoint/OneDrive**, not calendar events. The expected team practice:
+after a Teams meeting, download its transcript (Teams/Stream → Transcript → Download `.docx`, or
+`.vtt`) and save it to the configured transcript folder. Teams doesn't store a standalone transcript
+file next to the recording. Connector tools used: `sharepoint_search`, `sharepoint_folder_search`,
+`read_resource`.
 
-1. `outlook_calendar_search` with `query` = each entry in `sharepoint.meeting_series` (or the
-   user's filter argument), `afterDateTime` / `beforeDateTime` from the run scope, and
-   `order: "newest"`. Page with `offset` until it's exhausted or you hit the scope limit.
-2. `read_resource` each event's URI. Take the `meetingTranscriptUrl` field **verbatim**.
-3. `read_resource` that `meeting-transcript:///events/...` URI. For a **recurring series**,
-   append `?start=<iso>&end=<iso>` for that occurrence's window. Otherwise the connector returns
-   only the most recent transcripts of the series.
-4. If an event has no `meetingTranscriptUrl`, transcription wasn't on. Note it in the manifest as
-   "no transcript" and move on.
+If both `sharepoint.transcript_folders` and `sharepoint.transcript_queries` are empty, skip remote
+transcript discovery with a one-line notice. `local_inputs` still works.
+If the deprecated `sharepoint.meeting_series` key is present, treat its entries as extra
+`transcript_queries` and print once per run: "`sharepoint.meeting_series` is deprecated; rename it
+to `transcript_queries`, and set `transcript_folders` to scope the search to where transcripts are saved".
 
-**Fallback: transcript files in SharePoint/OneDrive.** Some teams save `.vtt`/`.docx` exports.
-Run `sharepoint_search` with a **content** query (meeting title or project name) and
-`fileType: "vtt"`, then `"docx"`. Narrow with `folderName` when the config pins
-`sharepoint.transcript_folders`. Read the hits with `read_resource` (follow its
-`startPage` footer hints until the file is complete).
+1. **Resolve folders.** For each `transcript_folders` entry, `sharepoint_folder_search(name)`. The
+   result can include **files** whose names match as well as folders. Keep only folder hits. The test is
+   `read_resource` on the hit: a folder returns a listing, a file returns content, so prefer that. As a
+   cheap pre-filter only, a `webUrl` ending in a known file extension (`docx|vtt|txt|pptx|pdf|xlsx|eml|mp4|png`)
+   is a file. Don't treat any dot in the name as an extension: folders such as `v1.2` or `Q3.2026` are common. If more than one
+   folder matches, show them at Gate A with their paths and let the user pick. If none match,
+   report it.
+2. **Search.** For each `fileType` in `docx` and `txt` (don't search `vtt`: find `.vtt` files with the
+   listing pass only, since the connector's text reads don't cover `.vtt`, see step 7):
+   - with folders: `sharepoint_search(query = <project name or each transcript_query>, fileType, folderName = <folder>)`
+   - with no folders: `sharepoint_search(query = <each transcript_query>, fileType)`
+   - add `afterDateTime` / `beforeDateTime` from the run scope or the user's filter argument
+   - page with `offset` (`nextOffset`) until it's exhausted
+   - de-duplicate hits by URI (search hits and listed files are one pool)
+
+   `folderName` is a partial match on the folder name, so it can return files from other sites or
+   libraries. Check each hit's `webUrl` against the resolved folder path and drop hits outside it.
+   **Search alone can miss transcripts.** Its results vary between calls and it can omit files that are
+   really there. So also run a **listing pass** for every resolved transcript folder:
+   - `read_resource` on the folder URI lists its entries. Recurse into each subfolder entry (meetings are
+     often saved one subfolder per session), up to 3 levels deep.
+   - Keep `.docx`, `.vtt` and `.txt` entries. Ignore everything else, and report `.mp4`/`.m4a` entries
+     under Not included (step 5).
+   - A listing gives name, size and URI but **no modified date**. Merge by URI with the search hits.
+     **Skip the date lookup for a listed file whose Location is already in the ledger**, unless
+     the run is a maintain run (below); a re-run of `erd-build` doesn't need it. For any other listed file
+     with no search hit, get its `lastModifiedDateTime` with
+     `sharepoint_search(query = <file name>, folderName = <its folder>)`. If that finds nothing, show the
+     date as unknown at Gate A and keep the file as a candidate. **A ledger row is never written with an
+     empty Fingerprint:** the `mod:` value is taken from `read_resource` or the search hit when the file is read
+     and staged. If neither gives a modified date, use `sha256:<12 hex>` of the **raw `read_resource` text** (before any
+     normalization), so it can be recomputed from the remote file.
+   - With no `transcript_folders` configured there is nothing to list, so discovery rests on the search
+     alone, and `.vtt` files, which are found only by listing, will not be seen. Say both in the Gate A notice.
+3. **Classify a hit as a transcript** when it's in a transcript folder, **or** its name or first page
+   has transcript shape: speaker-labelled utterances with timestamps (`0:03:12`, `00:03:12.000 -->`).
+   Anything else that matched a query is a candidate *document*, not a transcript. Handle it under §3.
+   A listed `.docx` in a transcript folder whose name has no transcript marker (`transcript`,
+   `transcription`, `Meeting Recording`) can be a supporting document, such as a question guide saved
+   in the same meeting subfolder. Show it at Gate A as "unclassified" and let the user choose; don't read it
+   to decide.
+4. **Meeting date.** Parse it from the filename (`YYYY-MM-DD`, `YYYYMMDD`, `MMDDYYYY` after a
+   `_`, or Teams' default `<Meeting title>-<yyyymmdd_hhmmss>-Meeting Transcript.docx`). Otherwise use
+   `lastModifiedDateTime` and show the date as `~<date> (modified)` at Gate A.
+5. **Recordings.** Don't search for `mp4`/`m4a`. If a folder listing turns them up, list them under
+   Not included.
+6. **Read** confirmed hits with `read_resource`, following the paging footer (`startPage` hint or
+   `[pages a–b of N]`) until the file is complete.
+7. **`.vtt` hits.** The connector's plain-text list doesn't include `.vtt`. Try one read; if it
+   returns no text, list the hit under "Not included: `.vtt` not readable by the connector; export the
+   transcript as .docx or drop the .vtt in `<local_inputs>`". Local `.vtt` files are read from disk and
+   always work.
 
 ## 3. SharePoint / OneDrive documents
 
@@ -94,6 +141,29 @@ Write each remote source's extracted text to `<staging_dir>/<run-date>/S<n>-<slu
 header of title, URI, date, and attendee count (**not** names unless the user asks). For
 transcripts, keep the speaker labels and timestamps, because citations point to `@HH:MM:SS`.
 
+**Transcript normalization.** A `.docx` transcript arrives as converted text. The connector flattens
+it: utterances run together as `<Speaker>  <H:MM:SS or M:SS>  <text>`, and line breaks are sparse and
+unreliable. Split on the **timestamp marker** (two or more spaces, `H:MM:SS` or `M:SS`, one or two
+spaces, then text). Take the speaker from the text between the previous double-space boundary and the
+marker. Don't assume `First Last`: labels also look like `Last, First M (ORG)`. Normalize to one line per
+utterance, `[HH:MM:SS] Speaker: text`. `M:SS` becomes `00:MM:SS` (`1:02` → `00:01:02`) and `H:MM:SS`
+becomes `HH:MM:SS` (`1:02:07` → `01:02:07`). A `.vtt` normalizes the same way, using the cue start time.
+**Sanity-check the result before staging.**
+- Timestamps are non-decreasing.
+- No utterance is empty.
+- When the header has a duration (Teams writes it as `<n>h <n>m <n>s`, `<n>m <n>s` or `<n>s`, right after
+  the meeting date), the last timestamp is at most the duration plus 60 s and at least 50% of it.
+
+A marker-like string inside speech (for example a spoken "3:30 appointment" after two spaces) can cause a
+false split, and these checks catch the worst cases. If any check fails, don't emit timestamps.
+
+**Untimed staging.** Stage the transcript with the same marker split, but strip the timestamps: one turn per
+line, `Speaker: text`, merging consecutive lines by the same speaker into one turn. Add
+`no timestamps; cite by §turn <k>` to the header. If no speaker markers can be found at all, stage
+each non-empty source line as its own turn. `k` is the 1-based line number among the turn lines, so it can
+be re-derived from the staged file. The analyst then cites `[S<n> §turn <k>]`; `erd-format.md` defines the
+numbering.
+
 **Slide decks** stage as one `## Slide <k>: <title>` section per slide (1-based), then the body
 text, tables, and the speaker notes as `**Notes:** <text>`. A slide with under ~15 words **and** a
 picture/graphic shape gets the line `[visual content not extracted]`. Citations to a slide use
@@ -108,12 +178,12 @@ the **global** IDs from the source ledger:
 | ID | Kind | Title | Date | Location | Staged file |
 |---|---|---|---|---|---|
 | S1 | context-md | Domain glossary | — | docs/context/glossary.md | (in repo) |
-| S2 | transcript | Eligibility data workshop | 2026-09-30 | meeting-transcript:///events/… | S2-eligibility-data-workshop.md |
+| S2 | transcript | Eligibility data workshop | 2026-09-30 | file:///…/Eligibility%20Data%20Workshop-20260930_140000-Meeting%20Transcript.docx | S2-eligibility-data-workshop.md |
 | S3 | sharepoint-doc | MAXIS data dictionary v4 | 2026-08-12 | file:///… | S3-maxis-data-dictionary.md |
 | S4 | slide-deck | Provider design review | 2026-10-05 | file:///…/Provider%20review.pptx | S4-provider-design-review.md |
 
 ## Not included
-- <title>: no transcript recorded / user excluded / unreadable
+- <title>: recording without a transcript file / `.vtt` not readable by the connector / user excluded / unreadable
 ```
 
 ## Source ledger
@@ -130,7 +200,7 @@ Global source registry for this ERD. IDs are permanent and never reused. Metadat
 | ID | Kind | Title | Date | Location | Fingerprint | Ingested | Staged file | Status |
 |---|---|---|---|---|---|---|---|---|
 | S1 | context-md | Glossary | — | docs/context/glossary.md | git:3f2a9c1 | 2026-10-01 | (in repo) | active |
-| S2 | transcript | Data workshop | 2026-09-15 | meeting-transcript:///events/…?start=2026-09-15T14:00Z&end=2026-09-15T15:00Z | event:AAMk…@2026-09-15T14:00Z | 2026-10-01 | S2-data-workshop.md | active |
+| S2 | transcript | Data workshop | 2026-09-15 | file:///…/Data%20Workshop-20260915_140000-Meeting%20Transcript.docx | mod:2026-09-15T16:05Z | 2026-10-01 | S2-data-workshop.md | active |
 | S4 | slide-deck | Provider design review v1 | 2026-10-02 | file:///…/Provider%20review.pptx | mod:2026-10-02T09:10Z | 2026-10-03 | S4-provider-design-review.md | superseded by S5 |
 | S5 | slide-deck | Provider design review v2 | 2026-10-05 | file:///…/Provider%20review.pptx | mod:2026-10-05T16:22Z | 2026-10-08 | S5-provider-design-review.md | active |
 ```
@@ -140,18 +210,34 @@ Global source registry for this ERD. IDs are permanent and never reused. Metadat
   source was found**, not where the file lives:
   - `git:<blob>` for every `context_paths` match: `git hash-object <path>`, first 7 characters.
   - `sha256:<first 12 hex>` for **anything under `local_inputs`**, even if git tracks it: `sha256sum`.
-  - `event:<eventId>@<occurrenceStart>` for Teams transcripts.
-  - `mod:<lastModifiedDateTime>` for SharePoint items (from the search hit or `read_resource`).
+  - `mod:<lastModifiedDateTime>` for SharePoint items, transcripts included (from the search hit or `read_resource`).
 - **Ingested:** the run date that first staged this version of the source.
 - **Staged file:** relative to `<staging_dir>/<Ingested>/`, or `(in repo)` for context MDs.
 - **Status:** `active` | `superseded by S<m>`.
 - **Rows are sorted strictly by ID.**
-- **Location of a transcript** must include the occurrence window:
-  `meeting-transcript:///events/…?start=<iso>&end=<iso>`. Without it, every weekly occurrence of a
-  recurring series would match the previous row and wrongly supersede it.
+- **Legacy rows.** Rows with a `meeting-transcript:///` Location and an `event:` fingerprint stay valid;
+  IDs and citations never change. Discovery never re-reads a `meeting-transcript:///` Location. When a
+  SharePoint transcript hit's title and meeting date match such a row, show it at Gate A as "probably
+  already ingested as S<n>". Offer this **only when the hit's date was parsed from its filename** (an
+  exact date), never from the `~modified` fallback: legacy titles are calendar subjects, and a wrong match
+  would attach a different file to an existing S-ID and its citations. If the user confirms, **relocate**
+  the row: replace its Location and Fingerprint with the file's, keep its ID, Ingested date and Status,
+  and don't stage or re-analyse it. If the user declines, the hit is a new source.
+- **Moved, renamed or re-saved transcripts.** Identity is by Location, so a re-download saved under a new
+  name or folder looks like a new source. When a new transcript hit has the same exact meeting date and a
+  similar title as an **active** transcript row with a different Location, show it at Gate A as "possibly
+  the same meeting as S<n>". *Similar* means: case-fold both titles, strip the date, the words
+  `Transcript`, `Transcription` and `Meeting Recording`, the file extension and punctuation, then the
+  results are equal or one contains the other. The user picks **new source** or **replaces S<n>**. First
+  check that the file at the old Location is gone with a **listing** of its folder (no content read). If it
+  still exists, it's a different file: treat the hit as new. "Replaces" supersedes the old row as a
+  *changed* source: new ID, old row `superseded by S<new>`.
 - **Matching:** a source is *known* if its **Location** is already in the ledger. If its
   Fingerprint matches the active row, it is unchanged. If the Fingerprint differs, it is *changed*:
-  it gets a new ID, and the old row becomes `superseded by S<new>`.
+  it gets a new ID, and the old row becomes `superseded by S<new>`. Compare fingerprints only of the **same
+  kind**. If the kinds differ (for example a `sha256:` row and a `mod:` value from discovery), the result is
+  *unknown*, not *changed*: re-read the file once and compare `sha256:` hashes of the raw text, or treat the
+  source as known and update the row's Fingerprint in place to the `mod:` value, keeping its ID.
 - **IDs are never reused**, even when superseded. Old citations to a superseded ID keep resolving.
 - **Staged text may be missing.** Staging is git-ignored and local, so `<staging_dir>/<Ingested>/<Staged file>`
   won't exist on another machine or a fresh clone. Treat a missing staged file as a normal case: don't
