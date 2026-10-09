@@ -133,12 +133,15 @@ Write each remote source's extracted text to `<staging_dir>/<run-date>/S<n>-<slu
 header of title, URI, date, and attendee count (**not** names unless the user asks). For
 transcripts, keep the speaker labels and timestamps, because citations point to `@HH:MM:SS`.
 
-**Transcript normalization.** A `.docx` transcript arrives as converted text, and the connector
-flattens it: utterances run together as `<Speaker>  <H:MM:SS or M:SS>  <text>`, with no reliable line
-breaks. Split on each speaker/timestamp marker and normalize to one line per utterance,
-`[HH:MM:SS] Speaker: text` (zero-pad the timestamp). A `.vtt` normalizes the same way, using the cue
-start time. If a transcript has no timestamps, stage it as is and add `no timestamps; cite by §<speaker
-turn n>` to its header. The analyst then cites `[S<n> §turn <k>]`.
+**Transcript normalization.** A `.docx` transcript arrives as converted text. The connector flattens
+it: utterances run together as `<Speaker>  <H:MM:SS or M:SS>  <text>`, and line breaks are sparse and
+unreliable. Split on the **timestamp marker** (two or more spaces, `H:MM:SS` or `M:SS`, one or two
+spaces, then text). Take the speaker from the text between the previous double-space boundary and the
+marker. Don't assume `First Last`: labels also look like `Last, First M (ORG)`. Normalize to one line per
+utterance, `[HH:MM:SS] Speaker: text` (zero-pad the timestamp). A `.vtt` normalizes the same way, using
+the cue start time. Spot-check the first few lines before staging the rest. If a transcript has no
+timestamps, stage it as is and add `no timestamps; cite by §<speaker turn n>` to its header. The
+analyst then cites `[S<n> §turn <k>]`.
 
 **Slide decks** stage as one `## Slide <k>: <title>` section per slide (1-based), then the body
 text, tables, and the speaker notes as `**Notes:** <text>`. A slide with under ~15 words **and** a

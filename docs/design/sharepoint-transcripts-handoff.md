@@ -183,7 +183,7 @@ only; formats recorded, no content kept.
   against the resolved folder path.
 - Real transcripts are `.docx`, saved in per-meeting subfolders (e.g. `Discovery and Design/<n>. <Topic>_<MMDDYYYY>/`),
   named like `…_Transcript_10072026.docx`. That is not Teams' default name, so date parsing also accepts `MMDDYYYY` after `_`.
-- A `.docx` read returns **flattened text** with no usable line breaks: a title/duration header, then
+- A `.docx` read returns **flattened text** with sparse line breaks: a title/duration header, then
   `<Speaker>   <H:MM:SS or M:SS>  <text>` runs. Timestamps are unpadded (`0:09`, `1:02:07`). The footer was
   `[pages 1–1 of 53]` with `endPage` set (a 1.5 h meeting is about 53 pages). Staging therefore splits on speaker/timestamp
   markers and zero-pads to `[HH:MM:SS]`; checked on a synthetic string only.
@@ -234,3 +234,12 @@ no transcript content read. Findings:
 folder **listing pass** (recursive, 3 levels) merged with the search hits by URI. Listings carry no modified date,
 so it is looked up with a name search, and the watermark is applied after merging. Listed `.docx` files without a
 transcript marker in the name show as "unclassified" at Gate A. Not yet run live.
+
+**Live listing and read (2026-10-09).** Listing `Discovery and Design/` with `read_resource` shows subfolders as
+`<name> (folder, <bytes> bytes) <uri>` and files as `(file, <bytes> bytes) <uri>`, and it also lists `.pptx`, `.xlsx`
+and `.eml` files, so the extension filter and the "unclassified" rule are needed. Real speaker labels include
+`Last, First M (ORG)`, not only `First Last`; `source-gathering.md` now says to anchor on the timestamp marker and not
+assume `First Last`. A child `claude -p` session has no Microsoft 365 connector (`enabledInChat: false`), so a live
+`erd-build` can't run unattended; discovery and reads were driven from the main session. The `.docx` normalizer and the
+sample build were **not** run against real content (the sandbox blocked staging client text), so the `.docx` staging
+format is verified by reading only. The temporary raw excerpt was deleted.
