@@ -56,7 +56,8 @@ question count; the active decision count; uncommitted ERD changes, yes or no. T
 
 Loop:
 - Load only the elements in play (`--ids`, with `--neighbors` for relationship questions) and the decisions touching them
-  (the per-element read). Read a full DEC block only when its rationale matters.
+  (the per-element read: `Grep` pattern `^\| DEC-.*\bE-11\b`, with the ID word-bounded). Read a full DEC block only when
+  its rationale matters (`Grep` pattern `^### DEC-4 ` with `-A 12`).
 - Answer with IDs and citations. When an active decision bears on the topic, say so (`per DEC-4`).
 - When the user is weighing options, **give a recommendation**, grounded in `erd-format.md`'s Appian conventions and the
   sources already cited. Don't fetch new sources.
