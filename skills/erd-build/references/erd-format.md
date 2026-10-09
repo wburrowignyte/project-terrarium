@@ -91,7 +91,9 @@ plus the audit fields (cite `CONVENTION`).
 - The Relationships table **still lists** a `many-to-one` row for every LOOKUP FK, because Appian
   needs one relationship per FK. Only the diagram drops the line: the viewer marks the referencing
   field inside its table instead.
-- The project config can override the name with `project.lookup_table` in `project-terrarium.yaml`.
+- The project config can override the name with `project.lookup_table` in `project-terrarium.yaml`. This tells the
+  analyst what to call the table; the viewer and reviewer recognise it by Kind `Lookup` (or a name ending `_LOOKUP`), so
+  give a renamed table Kind `Lookup`.
 
 ## Document structure
 

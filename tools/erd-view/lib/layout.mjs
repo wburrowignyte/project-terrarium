@@ -156,6 +156,14 @@ export function layoutDiagram(nodesIn, edgesIn, groupsIn = [], opts = {}) {
   }
   const hFinal = place(lv, lh);
 
+  // route() works in five phases for the connectors in `list`:
+  //   1. ends    which side of each table a connector leaves and enters (top/bottom, or facing sides for neighbours)
+  //   2. ports   spread the ends on each side evenly, ordered by where the other end is
+  //   3. tracks  the gutters each straight run lives in: one horizontal gutter, or horizontal / vertical / horizontal
+  //              (more when it crosses bands); vertical gutters are chosen nearest the source, toward the target
+  //   4. lanes   per gutter, greedy interval colouring so no two connectors share a stretch
+  //   5. coords  lane positions become polyline vertices, then line hops are added to the drawn path
+  // `squeeze` (reroute) spreads lanes evenly inside gutters that were not widened for them.
   function route(h, list, squeeze) {
     const ends = new Map(); // `${node}|${side}` -> [{P, end, o}]
     const addEnd = (n, s, o) => { const k = n.id + '|' + s; (ends.get(k) ?? ends.set(k, []).get(k)).push(o); };

@@ -145,7 +145,12 @@ test('rendered viewer: edge paths are M/L only, frames and LK markers are drawn'
   let chromium;
   try { chromium = createRequire(import.meta.url)('playwright').chromium; } catch { try { chromium = createRequire('/opt/node22/lib/node_modules/')('playwright').chromium; } catch { /* none */ } }
   const exe = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium';
-  if (!chromium || !existsSync(exe)) return t.skip('playwright or chromium not available');
+  if (!chromium || !existsSync(exe)) {
+    const why = 'rendered-viewer test needs playwright and chromium (set CHROMIUM to the browser path)';
+    if (process.env.CI) assert.fail(why);
+    console.error(`skipped: ${why}`);
+    return t.skip(why);
+  }
   const dir = mkdtempSync(join(tmpdir(), 'erdview-')), file = join(dir, 'g.html');
   writeFileSync(file, render(grouped).html);
   const browser = await chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });

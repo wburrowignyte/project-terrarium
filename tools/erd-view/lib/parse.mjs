@@ -258,7 +258,14 @@ function deriveGroups(model, byId) {
       }
     }
   };
-  const seed = (list) => { for (const e of list) { group.set(e.id, e.name); if (!order.includes(e.name)) order.push(e.name); } walk(list.map((e) => e.id)); };
+  // A seed named like another group (or like a reserved bucket) is disambiguated with its entity ID.
+  const seed = (list) => {
+    for (const e of list) {
+      const name = order.includes(e.name) || e.name === 'Other' || e.name === 'Shared reference' ? `${e.name} (${e.id})` : e.name;
+      group.set(e.id, name); order.push(name);
+    }
+    walk(list.map((e) => e.id));
+  };
   seed(ents.filter(isSeed));
   // Core entities in a Core-only cycle have no seed: take the lowest unassigned one, repeat.
   for (const e of ents) if (kind.get(e.id) === 'Core' && !group.has(e.id)) seed([e]);
