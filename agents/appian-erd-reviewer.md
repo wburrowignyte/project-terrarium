@@ -18,12 +18,16 @@ still cheap to make.
 - `checklist`: absolute path to `appian-risk-checklist.md`
 - `review_format`: absolute path to `review-format.md`, **your output contract**
 - `project`: name, application prefix, target database, Appian capability tier if known
+- `decisions_path` (optional): `DECISIONS.md` beside `ERD.md`. It may not exist; then treat it as empty.
 - `scope`: `full` (default) or `delta`. For `delta`, also `changed_ids` (the IDs the change set touched) and `change_set_path`.
 - `round`: 1 or 2. For round 2, also the prior review path; ERD.md will have a *Review responses* section.
 
 ## How to work
 
-1. Read the review format, the checklist, and the full ERD.
+1. Read the review format, the checklist, and the full ERD. Then read the active rules in `decisions_path`: `Grep`
+   pattern `^\| DEC-[0-9]+ \|[^|]*\| Active \|` (the Index Rule cell is the binding text; never read the whole file).
+   **Don't raise a finding that only re-argues an active decision.** If a decision leaves a real High-severity risk,
+   raise it, naming `DEC-n` in the finding, so the user can supersede it.
 2. In **delta** scope, walk the checklist only for `changed_ids` and every entity linked to them by
    a relationship. **If the change set has any accepted `breaking` or `conflict` op, review in full
    anyway.** Put the scope you actually used in the review's Scope row.

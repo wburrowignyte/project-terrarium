@@ -29,6 +29,9 @@ git-ignored. Also resolve `sharepoint.deck_folders` (default `[]`), `maintain.lo
 - If `<erd_dir>/sources.md` is missing, run the **Migration** from the `erd-build` skill (Step 2).
 - Read the ERD's current Version (`BASE_VERSION`) and record the set of all `E-`, `R-`, `A-` and
   `Q-` IDs in it (`IDS_BEFORE`).
+- Resolve `decisions_path` = `<erd_dir>/DECISIONS.md` (it may not exist; a missing file never fails a run), and record
+  `DEC_CITES_BEFORE`: `Grep -o "\[DEC-[0-9]+\]"` with the element IDs on `ERD.md` (a list of `E-n`/`R-n` ↔ DEC pairs is
+  enough). The contract is `../erd-assist/references/decisions-format.md`.
 
 Let `RUN` = today's date (`YYYY-MM-DD`) and `STAGE` = `<staging_dir>/<RUN>`.
 
@@ -51,7 +54,7 @@ and mark any replaced rows `superseded by S<new>`. Let `NEW_IDS` = the IDs alloc
 ## Step 4: Propose (erd-analyst, maintain)
 
 Launch the `erd-analyst` subagent (foreground) with: `mode: maintain`, `staging_dir: STAGE`,
-`ledger_path: <erd_dir>/sources.md`, `erd_path: <erd_dir>/ERD.md`, `format_spec` and
+`ledger_path: <erd_dir>/sources.md`, `erd_path: <erd_dir>/ERD.md`, `decisions_path`, `format_spec` and
 `changeset_spec` (absolute), `change_set_path: <erd_dir>/changes/<RUN>-changeset.md`,
 `new_source_ids: NEW_IDS`, `changes_dir: <erd_dir>/changes`, the `project` block, and any focus
 from `$ARGUMENTS`.
@@ -60,12 +63,15 @@ Verify that:
 - the change set exists and follows `changeset-format.md`;
 - every Evidence citation uses an ID in `NEW_IDS`;
 - every Target ID exists in `ERD.md` or is provisional (`E-new-<k>` etc.);
-- every modifying, breaking or conflict op has Supersedes.
+- every modifying, breaking or conflict op has Supersedes;
+- every op whose Target is in an active DEC's Affects (read the active rules from `decisions_path`: `Grep` pattern
+  `^\| DEC-[0-9]+ \|[^|]*\| Active \|`) is class `conflict` with `[DEC-n]` in Supersedes.
 
 If any check fails, send the agent back once with the specific problem.
 
 ## Step 5: Gate C, change-set decision
 
+- **List DEC conflicts first**, as `CS-n reverses DEC-m (<rule>)`. Always require an explicit choice for them.
 - Summarize by class: one line per op, with conflicts listing **both** sides (Evidence and
   Supersedes).
 - Pre-accept the classes in `maintain.auto_accept`, **except** a `raise-question` marked
@@ -82,7 +88,7 @@ If any check fails, send the agent back once with the specific problem.
 
 ## Step 6: Apply (erd-analyst, apply)
 
-Launch `erd-analyst` with: `mode: apply`, `staging_dir: STAGE`, `ledger_path`, `erd_path`,
+Launch `erd-analyst` with: `mode: apply`, `staging_dir: STAGE`, `ledger_path`, `erd_path`, `decisions_path`,
 `format_spec` and `changeset_spec` (absolute), `change_set_path` (Decisions filled), and the
 `project` block.
 
@@ -91,13 +97,16 @@ Verify that:
 - all citations resolve against the ledger;
 - Version went up by exactly 1 from `BASE_VERSION`;
 - no ID in `IDS_BEFORE` has disappeared (diff the ID set before and after);
-- the Change log row for this version is present.
+- the Change log row for this version is present;
+- every pair in `DEC_CITES_BEFORE` is still present, unless an accepted op superseded that DEC;
+- every DEC listed in an accepted op's Supersedes has its Index Status (and block Status) set to
+  `Superseded by CS-<n> (<changeset file>)`.
 
 If any check fails, send the agent back once with the specific problem.
 
 ## Step 7: Delta review and Gate B
 
-Launch `appian-erd-reviewer` with: `erd_path`, `ledger_path`, `staging_dir`, `scope: delta`,
+Launch `appian-erd-reviewer` with: `erd_path`, `decisions_path`, `ledger_path`, `staging_dir`, `scope: delta`,
 `changed_ids` (the final IDs touched by accepted ops, from the ID map), `change_set_path`,
 `checklist` and `review_format` (absolute), the `project` block, and `round: 1`. The reviewer
 reviews in full by itself when an accepted `breaking` or `conflict` op is present.
@@ -107,7 +116,7 @@ exists from a same-day build, use `<RUN>-maintain-review.md`. Append `-r2` for r
 ERD header's `Status` line to `Reviewed: <verdict>`.
 
 Then run **Gate B exactly as in `erd-build`** (Step 5): summarize, and on "Approve with
-changes / Rework" offer to send findings to `erd-analyst` with `mode: revise`, then re-review
+changes / Rework" offer to send findings to `erd-analyst` with `mode: revise` (pass `decisions_path`), then re-review
 (`round: 2`). **At most 2 review rounds.**
 
 ## Step 8: Finish
@@ -117,6 +126,7 @@ Report:
 - the staging path (and a reminder that it's git-ignored and holds raw source text)
 - the still-open questions
 - the "Not included" sources
+- any Technical Decisions superseded this run (`DEC-n by CS-m`)
 
 Don't commit. Leave that to the user.
 

@@ -83,10 +83,16 @@ Add to `.gitignore` (create it if absent, and don't duplicate existing lines):
 
 Create `.project-terrarium/inputs/`, `<erd_dir>/reviews/` and `<erd_dir>/changes/` if they're missing.
 
+Outputs note for the user: everything under `<erd_dir>/` is committed (`ERD.md`, `sources.md`, `changes/`, `reviews/`),
+except the generated `ERD.html`. `<erd_dir>/DECISIONS.md` is also committed. `/project-terrarium:erd-assist` creates it on
+the first Technical Decision, and every later build, maintain and review run treats its **Active** rows as binding. There
+is no config key for it: it always sits next to `ERD.md`.
+
 ## 4. Verify
 
 - `git check-ignore .project-terrarium/staging/x` succeeds.
 - If the M365 connector is available, run one `sharepoint_folder_search` per transcript folder and one
   `sharepoint_search` (`fileType: docx`, limit 3). Report the folder and hit counts. Don't read
   content during setup.
-- Finish by telling the user to run `/project-terrarium:erd-build`, and `/project-terrarium:erd-maintain` for later updates.
+- Finish by telling the user to run `/project-terrarium:erd-build`, `/project-terrarium:erd-maintain` for later updates, and
+  `/project-terrarium:erd-assist` to iterate on the ERD and record decisions.

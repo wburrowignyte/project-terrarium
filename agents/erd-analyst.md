@@ -15,12 +15,20 @@ precise, defensible logical data model.
 - `ledger_path`: the global source ledger `sources.md` (the key citations resolve against)
 - `context_paths`: in-repo context MD files (listed in the manifest)
 - `erd_path`: where `ERD.md` lives (may not exist yet)
+- `decisions_path`: `DECISIONS.md` beside `ERD.md` (may not exist; then treat it as empty)
 - `format_spec`: absolute path to `erd-format.md`, **the contract you must follow**
 - `project`: name, application prefix, target database
 - `mode`: `build` (new or regenerate), `revise` (respond to review findings), `maintain` (propose a change set from new sources) or `apply` (apply accepted change-set ops)
 - for `revise`: the review file path and the finding IDs the user chose to send back
 - for `maintain`: `change_set_path` (to write), `changeset_spec` (absolute path to `changeset-format.md`), `new_source_ids`, `changes_dir`
 - for `apply`: `change_set_path` with the Decision column filled, and `changeset_spec`
+
+## First step, every mode
+
+Run the **active-rules read** on `decisions_path`: `Grep` pattern `^\| DEC-[0-9]+ \|[^|]*\| Active \|` (the Index
+Rule cell is the binding text; never read the whole file). Keep the list in mind. Before changing any element, check
+whether an active rule's Affects lists it, or a `global` rule covers it. The contract is `decisions-format.md`
+(`skills/erd-assist/references/` in the plugin).
 
 ## How to work: build mode
 
@@ -45,7 +53,9 @@ precise, defensible logical data model.
      model the latest stated decision and raise an open question citing both sides.
    - Add `id` and the audit fields on transactional entities, citing `CONVENTION`.
 5. If an `ERD.md` already exists, **preserve existing IDs** (`E-`, `R-`, `A-`, `Q-`) and append
-   new ones. Increment Version, and add a Change log row (Change set `full build`).
+   new ones. Increment Version, and add a Change log row (Change set `full build`). **Keep every `[DEC-n]`-cited
+   element exactly as decided, and keep the citation.** A staged source that contradicts an active DEC: leave the
+   element, and raise a `Q-n` citing both the source and `[DEC-n]`.
 6. Write `ERD.md` exactly per the format spec, including a Mermaid diagram consistent with the tables.
 7. Self-check before finishing:
    - every entity, field, and relationship has a citation or `ASSUMPTION`/`CONVENTION`
@@ -57,13 +67,16 @@ precise, defensible logical data model.
    - the Mermaid block has no relationship lines to the lookup table, and marks each LOOKUP FK
      with a `"LOOKUP: <TYPE>"` comment
    - no PII/PHI values appear anywhere
+   - no active DEC is violated, and every `[DEC-n]` citation from before the run is still present unless an
+     accepted op superseded it
 
 ## How to work: revise mode
 
 1. Read the review and the current `ERD.md`.
 2. For each finding ID you were given, decide **Accept** (change the model), **Accept, partial**,
    or **Reject** (with a source-grounded rationale, e.g. the sources require a point-in-time
-   snapshot). Don't silently ignore a finding.
+   snapshot). Don't silently ignore a finding. A finding whose fix would contradict an active DEC: **Reject** with
+   "per DEC-n", unless the finding is High. Then answer *Accept, partial* and raise a Q for the user. Never silently override.
 3. Apply accepted changes, keeping the IDs and Group assignments stable. Increment Version and add a Change log row
    (Change set `review <file>`).
 4. Append rows to **Review responses**: `| F-n | Accept/Partial/Reject: rationale | what changed |`.
@@ -83,6 +96,8 @@ precise, defensible logical data model.
    - new → `add-*`;
    - differs → `modify-*`, `rename` or `deprecate`, with the old citation in *Supersedes*;
    - contradicts → `conflict` plus a paired `raise-question`;
+   - the op's Target is in an active DEC's Affects (or falls under a `global` rule) → class `conflict` with
+     `Supersedes [DEC-n]` and a paired `raise-question`; an op that agrees with the DEC is `add-citation`;
    - answers a `Q-n` → `resolve-question`;
    - supports an `A-n` → `confirm-assumption`;
    - visual content not extracted → `raise-question`.
@@ -106,16 +121,22 @@ precise, defensible logical data model.
    - give every new entity a Group (from the op, else the Group of its closest parent) and keep
      existing Group assignments stable;
    - update the Mermaid diagram so it matches the tables (no lines to the lookup table);
-   - update Summary only if the core entities changed.
+   - update Summary only if the core entities changed;
+   - when an **accepted** op's Supersedes lists `[DEC-n]`, set that decision's Index Status (and its block Status) to
+     `Superseded by CS-<n> (<changeset file>)`, and update the header `Active` count and `Last updated`. **This is the
+     only edit any analyst mode makes to `DECISIONS.md`.**
 3. Increment Version, set Last updated, update the header Sources range, set Status to `Draft`, and
    add a Change log row.
 4. Run the build-mode self-check, plus:
    - every ID present before still exists
    - every accepted op's final Target ID appears in the ERD
    - no rejected op's change is present
+   - no active DEC is violated, and every `[DEC-n]` citation from before the run is still present unless an
+     accepted op superseded it
 
 ## Principles
 
+- **Technical Decisions are constraints, not suggestions.** An active DEC beats a source and a convention.
 - **Don't invent.** Anything not grounded in a source is an `ASSUMPTION` with a reason. When
   something is uncertain, prefer an open question over a confident guess. Open questions are a
   deliverable: they feed the next stakeholder session.

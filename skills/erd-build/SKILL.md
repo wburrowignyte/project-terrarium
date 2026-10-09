@@ -28,6 +28,9 @@ Read `project-terrarium.yaml` at the repo root. If it's missing, stop and tell t
 Confirm `staging_dir` is git-ignored (`git check-ignore`). If it isn't, stop and fix that first
 (offer to add it to `.gitignore`). Sources may contain PII/PHI.
 
+Resolve `decisions_path` = `<erd_dir>/DECISIONS.md` (the committed Technical Decisions log; it may not exist, and a
+missing file never fails a run). Its contract is `../erd-assist/references/decisions-format.md`.
+
 Let `RUN` = today's date (`YYYY-MM-DD`) and `STAGE` = `<staging_dir>/<RUN>`.
 
 ## Step 2: Gather and stage sources
@@ -55,19 +58,23 @@ If there are **no transcripts and no docs** (only context MDs), say so and ask w
 
 ## Step 3: Agent 1, erd-analyst (build)
 
+Before launching, if `ERD.md` already exists, record `DEC_CITES_BEFORE`: `Grep -o "\[DEC-[0-9]+\]"` with the element
+IDs on `ERD.md`. A simple list of `E-n`/`R-n` ↔ DEC pairs is enough.
+
 Launch the `erd-analyst` subagent (foreground; you need its result). The prompt must include:
-`mode: build`, `staging_dir: STAGE`, `manifest`, `ledger_path: <erd_dir>/sources.md`, `erd_path: <erd_dir>/ERD.md`, `format_spec`
+`mode: build`, `staging_dir: STAGE`, `manifest`, `ledger_path: <erd_dir>/sources.md`, `erd_path: <erd_dir>/ERD.md`, `decisions_path`, `format_spec`
 (absolute), the `project` block, and any focus from `$ARGUMENTS`. If `ERD.md` already exists, tell it
 to preserve IDs and increment the version.
 
 When it returns, verify that `ERD.md` exists and has the required sections, including `## Groups`, and that every entity except the lookup table has
 a `Group` bullet. Check that
 every `[S<n>` citation resolves to the ledger: grep for citations and compare them with the
-ledger IDs. If either check fails, send the agent back once with the specific problem.
+ledger IDs. Verify that every `[DEC-` citation resolves to the `DECISIONS.md` Index, and that every pair in
+`DEC_CITES_BEFORE` is still present. If any check fails, send the agent back once with the specific problem.
 
 ## Step 4: Agent 2, appian-erd-reviewer
 
-Launch the `appian-erd-reviewer` subagent with: `erd_path`, `ledger_path`, `staging_dir`, `scope: full`, `checklist`
+Launch the `appian-erd-reviewer` subagent with: `erd_path`, `decisions_path`, `ledger_path`, `staging_dir`, `scope: full`, `checklist`
 and `review_format` (absolute), the `project` block, and `round: 1`.
 
 Save its final message **verbatim** to `<erd_dir>/reviews/<RUN>-appian-review.md` (append `-r2`
@@ -86,8 +93,8 @@ Then:
 - **Approve:** go to Step 6.
 - **Approve with changes / Rework:** ask which findings to send back. Offer *all High + Medium*
   as the default, or let the user pick IDs, or accept as-is.
-  - If findings are sent: run `erd-analyst` with `mode: revise`, the review path, and the chosen
-    finding IDs. Then run `appian-erd-reviewer` with `round: 2` and the prior review path. Save the
+  - If findings are sent: run `erd-analyst` with `mode: revise`, `decisions_path`, the review path, and the chosen
+    finding IDs, and repeat the `[DEC-` verification from Step 3. Then run `appian-erd-reviewer` with `round: 2` and the prior review path. Save the
     review as `-r2` and summarize again.
   - **At most 2 review rounds.** After round 2, report the remaining findings as open items and stop.
 
