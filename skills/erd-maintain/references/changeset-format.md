@@ -17,13 +17,16 @@ ops to `ERD.md`. Follow this structure exactly: column order and heading text ar
   - `breaking`: `rename`; `deprecate`; any change to Key or FK; any cardinality change.
   - `conflict`: any op whose Evidence contradicts an existing citation. **Conflict overrides the
     other classes.**
+  - Any op that targets an element in an **Active** decision's Affects (in `DECISIONS.md`), or falls under a
+    `global` decision, is `conflict`.
 - **Target:** existing stable IDs, written as `E-3`, `E-3.fieldName`, `R-5`, `A-2` or `Q-1`. New
   elements get provisional IDs `E-new-<k>`, `R-new-<k>`, `A-new-<k>`, `Q-new-<k>`; apply mode
   replaces them with the next free IDs.
 - **Evidence:** citations from the new sources only, in the forms from `erd-format.md`
   (`[S<n> @HH:MM:SS]`, `[S<n> §Section]`, `[S<n> slide <k>]`).
 - **Supersedes:** the existing citation(s) the change overrides. It is **required** for
-  `modifying`, `breaking` and `conflict` ops.
+  `modifying`, `breaking` and `conflict` ops. `[DEC-<n>]` is a valid entry: it marks an op that reverses a
+  Technical Decision, and apply mode sets that decision's Status when the op is accepted.
 - **Conflict ops** follow the existing rule: the latest stated decision wins, and DHS/state
   stakeholders win over vendor speculation. Every conflict op is paired with a `raise-question`
   op that cites both sides, so the user can choose "ask instead of change". Write

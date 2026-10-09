@@ -1,7 +1,9 @@
 # ERD.md format (the contract)
 
 `ERD.md` is the canonical, git-tracked data model for the project. The `erd-analyst` writes it,
-the `appian-erd-reviewer` reads it, and `erd-maintain` diffs new sources against it and edits it only through accepted change sets. Follow this
+the `appian-erd-reviewer` reads it, `erd-maintain` diffs new sources against it and edits it only through accepted change sets,
+and `erd-assist` makes targeted edits at the user's direction. Binding design decisions live in `DECISIONS.md` next to
+`ERD.md` (see `skills/erd-assist/references/decisions-format.md`). Follow this
 structure exactly: section order, heading text, and table columns are what later runs parse.
 
 ## Rules
@@ -27,6 +29,10 @@ structure exactly: section order, heading text, and table columns are what later
   transitions), and say why in that entity's Purpose.
 - **Stable IDs.** Each entity has an ID `E-<n>`, each relationship `R-<n>`, each question
   `Q-<n>`, each assumption `A-<n>`. Never renumber existing IDs; append new ones.
+- **Technical Decisions bind.** An **Active** decision in `DECISIONS.md` (next to `ERD.md`) overrides sources and
+  conventions for the elements in its Affects (and, for `global`, for the modelling policy it states). Never revert
+  or drop a `[DEC-n]`-cited element. A newer source that contradicts an active decision becomes an open question
+  (build, revise) or a `conflict` op with `Supersedes [DEC-n]` (maintain), never a silent change.
 
 ## Citation forms
 
@@ -36,6 +42,7 @@ structure exactly: section order, heading text, and table columns are what later
 | `[S<n> §turn <k>]` | transcript without timestamps, by speaker turn (`k` is the 1-based turn in the staged file; consecutive lines by the same speaker are one turn) |
 | `[S<n> §Section]` | document, by section |
 | `[S<n> slide <k>]` | slide deck, by 1-based slide number |
+| `[DEC-<n>]` | an element set by a Technical Decision in `DECISIONS.md` (a real citation, not an `ASSUMPTION`; an element may carry both source and DEC citations) |
 | `ASSUMPTION` / `CONVENTION` | no source (see above) |
 
 ## Deprecation
@@ -192,5 +199,6 @@ Bullets for concepts heard in the sources but deliberately not modeled, with the
 | 3 | 2026-10-08 | changes/2026-10-08-changeset.md (CS-1–CS-9; 7 accepted) | +E-12 Provider Capacity; authorizedHours → Decimal; Q-2 resolved |
 
 (Every write adds one row. `erd-build` writes Change set `full build`; revise mode writes
-`review <file>`; `erd-maintain` apply writes the change set path and accepted count.)
+`review <file>`; `erd-maintain` apply writes the change set path and accepted count; `erd-assist` writes
+`assist DEC-<a>–DEC-<b>`, or `assist (no decision)` for pure corrections such as a typo or a Mermaid sync.)
 ````
