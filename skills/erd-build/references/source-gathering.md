@@ -39,13 +39,29 @@ to `transcript_queries`".
    - with no folders: `sharepoint_search(query = <each transcript_query>, fileType)`
    - add `afterDateTime` / `beforeDateTime` from the run scope or the user's filter argument
    - page with `offset` (`nextOffset`) until it's exhausted
-   - de-duplicate hits by URI
+   - de-duplicate hits by URI (search hits and listed files are one pool)
 
    `folderName` is a partial match on the folder name, so it can return files from other sites or
    libraries. Check each hit's `webUrl` against the resolved folder path and drop hits outside it.
+   **Search alone can miss transcripts.** Its results vary between calls and it can omit files that are
+   really there. So also run a **listing pass** for every resolved transcript folder:
+   - `read_resource` on the folder URI lists its entries. Recurse into each subfolder entry (meetings are
+     often saved one subfolder per session), up to 3 levels deep.
+   - Keep `.docx`, `.vtt` and `.txt` entries. Ignore everything else, and report `.mp4`/`.m4a` entries
+     under Not included (step 5).
+   - A listing gives name, size and URI but **no modified date**. Merge by URI with the search hits. For a
+     listed file with no search hit, get its `lastModifiedDateTime` with
+     `sharepoint_search(query = <file name>, folderName = <its folder>)`. If that finds nothing, show the
+     date as unknown at Gate A and leave the `mod:` fingerprint blank until the file is read.
+   - With no `transcript_folders` configured there is nothing to list, so discovery rests on the search
+     alone. Say so in the Gate A notice.
 3. **Classify a hit as a transcript** when it's in a transcript folder, **or** its name or first page
    has transcript shape: speaker-labelled utterances with timestamps (`0:03:12`, `00:03:12.000 -->`).
    Anything else that matched a query is a candidate *document*, not a transcript. Handle it under §3.
+   A listed `.docx` in a transcript folder whose name has no transcript marker (`transcript`,
+   `transcription`, `Meeting Recording`) can be a supporting document, such as a question guide saved
+   in the same meeting subfolder. Show it at Gate A as "unclassified" and let the user choose; don't read it
+   to decide.
 4. **Meeting date.** Parse it from the filename (`YYYY-MM-DD`, `YYYYMMDD`, `MMDDYYYY` after a
    `_`, or Teams' default `<Meeting title>-<yyyymmdd_hhmmss>-Meeting Transcript.docx`). Otherwise use
    `lastModifiedDateTime` and show the date as `~<date> (modified)` at Gate A.

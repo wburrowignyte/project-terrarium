@@ -229,3 +229,8 @@ no transcript content read. Findings:
 - `folderName` filters leak: hits from `Ignyte Proposals/…` and `Shared Documents/Forms/…` came back; all were dropped by the `webUrl` check.
 - Transcripts are named inconsistently (`…_Transcript_10072026`, `…_transcript_10022026`, `…_10052026`, no date, `…_Transcription.docx`),
   so date parsing falls back to the `Meeting Recording` header date or `lastModifiedDateTime` fairly often.
+
+**Spec change after the dry run.** `source-gathering.md` §2 step 2 and `delta-discovery.md` §2 now add a
+folder **listing pass** (recursive, 3 levels) merged with the search hits by URI. Listings carry no modified date,
+so it is looked up with a name search, and the watermark is applied after merging. Listed `.docx` files without a
+transcript marker in the name show as "unclassified" at Gate A. Not yet run live.
