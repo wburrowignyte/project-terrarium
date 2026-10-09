@@ -415,4 +415,37 @@ Tests: `tools/erd-assist/test/slice.test.mjs` (`node:test`) cover each flag on t
 - [ ] Implementation notes are filled in.
 
 ## Implementation notes
-(Builder: record decisions you had to make, the Task 1 viewer check result, verification results and deviations here.)
+### Decisions made while building
+- **`erd-slice` is one file** (`tools/erd-assist/erd-slice.mjs`) that exports `run`, `load`, `check` and `parseDecisions` for the tests, like `erd-view.mjs` exports `render`. `parse.mjs` is unchanged.
+- **Group in outline lines** shows `—` when the ERD has no Group bullets (the viewer derives groups, but the outline reports what the file says).
+- **`--check` output:** errors and warnings go to stderr as `error:` / `warning:`; stdout ends with `ok`, `ok (N warning(s))` or `N error(s)`. Exit 1 only for errors. A non-Active `[DEC-n]` citation, a header `Active` count that disagrees with the Index, and `parseErd` warnings are warnings; duplicate Index rows are errors.
+- **`--check <ids>` scope:** the given IDs, their 1-hop entity neighbours, and the relationships touching them. `parseErd` warnings are matched by ID or table name.
+- **`--decisions` given but the file is missing** is treated as an empty log, so every `[DEC-n]` citation is then an error. With no `--decisions` and no `DECISIONS.md` beside the ERD, citations aren't checked.
+- **`E-n.field` slice** prints the entity heading with the field tag, the table header and the one row.
+- **Analyst agent:** the active-rules read is a "First step, every mode" section rather than a bullet in each mode. It points at `decisions-format.md` by repo path.
+- **Fixture deviation:** the handoff puts DEC-2 on an E-9 field but says DEC-4 (on `E-2 R-2`) supersedes it, which made no sense and the assistant flagged it. DEC-2 is instead the earlier rule on `E-2.householdId` ("a member may belong to several households") that DEC-4 reverses. `ERD-with-decs.md` is Version 2 with a Change log row `assist DEC-1–DEC-4`.
+- **DEC-1 Affects only `E-11.authorizedHoursPerWeek`**, as specified. The S4 op on `E-12.authorizedHoursPerWeek` is therefore not forced to `conflict` (see `assist-expected.md`).
+
+### Task 1: viewer check
+`erd-view` on a copy of the baseline with `[DEC-1]` added to the E-11 `authorizedHoursPerWeek` Sources cell renders the same 14 entities and 18 relationships, with no new warnings, and the citation survives in the parsed model. No viewer change was needed.
+
+### Verification results
+1. `node --test "tools/*/test/*.test.mjs"`: 52 pass (the existing `erd-view` tests plus 17 new `erd-slice` tests).
+2. `claude plugin validate .` and `claude plugin validate .claude-plugin/plugin.json`: both pass.
+3. Budget on the baseline (19,474 bytes): `--outline` 1,964 bytes (10%), `--ids E-11 --neighbors` about 2.5 KB (13%). Asserted in the tests.
+4. **Scripted assist session** (scratch copy of `sample-project`, run headlessly as `claude -p … --continue` with `--permission-mode acceptEdits`): all six steps behaved as in `assist-expected.md`. No full `Read` of `ERD.md` or `DECISIONS.md` appears in any turn: only `erd-slice` calls, the active-rules `Grep`, `git diff --stat` and short `sed` ranges. Results: DEC-5 (`E-11.endDate` required, Version 1 to 2), DEC-6 (rename, no second bump), DEC-7 (asked "Supersede DEC-1?", then DEC-1 became `Superseded by DEC-7` in the Index and block), DEC-8 (decision-only, no ERD edit). `erd-slice --check` was ok at the end.
+5. **Maintain respects decisions** (scratch copies, `ERD-with-decs.md` as `ERD.md`):
+   - The S4 op on `E-11.authorizedHoursPerWeek` was a `conflict` with `Supersedes [DEC-1]`, paired with a question, and listed first at Gate C as `CS-n reverses DEC-1 (…)`.
+   - **Reject run:** the field and `[DEC-1]` were unchanged after apply, DEC-1 stayed Active, `--check` ok, and the reviewer named DEC-1 in a Medium finding instead of re-arguing it.
+   - **Accept run:** DEC-1 became `Superseded by CS-1 (2026-10-09-changeset.md)` in the Index and the block, header `Active` went 3 to 2, the field became `Decimal(4,1)`, and `--check` was ok.
+
+### Deviations and things not run
+- Sessions were run headlessly, one prompt per turn, not interactively.
+- In the assist session the model made its edits with short Python scripts through Bash rather than `Edit` calls. The result is the same targeted change, but the skill text says `Edit`.
+- The assist session wrote the Change log row as `assist DEC-5, DEC-6, DEC-7`. `SKILL.md` now says to write a contiguous range as `assist DEC-5–DEC-7`; that wording change was not re-run.
+- I did not diff `ERD.html` warnings before and after each assist edit; `erd-view` ran and the `--check` result was clean.
+- In the maintain runs the analyst numbered the ops differently on each run, so a scripted reply written from run 1 left two ops undecided in run 2. The orchestrator asked instead of guessing, and a follow-up reply finished the run.
+- Maintain Gate B (review rounds) was reached in both runs but not worked through; the reviews were produced and the run was stopped there.
+- The baseline has no `## Groups`, so maintain adds a Groups section when it adds entities.
+- Not run: `erd-build` against decisions (the `DEC_CITES_BEFORE` and `[DEC-` resolution checks are specified in the skill but not exercised), and the 300-row archive rule.
+

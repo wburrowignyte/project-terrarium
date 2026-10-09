@@ -90,7 +90,7 @@ Loop:
    Changed or added elements cite `[DEC-n]`: append it to the existing citations, don't replace source citations.
 5. **One version per session.** On the first `ERD.md` write of the session: Version +1, Last updated = today, Status
    `Draft`, and add a Change log row `| <v> | <date> | assist DEC-<n> | <summary> |` (`assist (no decision)` for a pure
-   correction). Later writes in the same session **update that row** (extend the DEC range, append to Summary) and don't
+   correction). Later writes in the same session **update that row** (extend the DEC range, written as `assist DEC-5–DEC-7`, and append to Summary) and don't
    bump again. Track "this session's version" in the conversation, and confirm it with `--outline` (the header Version
    equals the last Change log row with `assist`).
 6. **Validate** before replying:
