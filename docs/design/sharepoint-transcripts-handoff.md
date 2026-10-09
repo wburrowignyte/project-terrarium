@@ -206,7 +206,12 @@ the row is kept byte-for-byte, isn't re-read ("S4 was not re-read; legacy-format
 the new sources get S5/S6. The relocation **offer** couldn't be exercised, because it needs a matching SharePoint
 hit and the scratch config has no remote sources.
 
-**Not run:** §7.3 (deprecation alias), the relocation offer in §7.5, and a live build against the SharePoint folder.
+§7.3 deprecation (scratch copy of the sample config with `meeting_series: ["Data Workshop"]`, maintain run, no remote
+calls): the run printed "`sharepoint.meeting_series` is deprecated; rename it to `transcript_queries`" exactly once.
+That the entries are then used as queries couldn't be observed, because remote calls were disabled. The repo's sample
+config was not modified.
+
+**Not run:** the relocation offer in §7.5, the alias-as-query behaviour in §7.3, and a live build against the SharePoint folder.
 
 **Deviations / follow-ups.**
 - `docs/TECH_DEBT.md` is not on `dev`; TD-1 not updated.
