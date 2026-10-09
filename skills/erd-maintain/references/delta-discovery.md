@@ -15,7 +15,11 @@ Watermark = the newest `Ingested` date in `<erd_dir>/sources.md`, minus `maintai
   listing pass** over each transcript folder. A listing can't be date-filtered, so apply the watermark
   after merging: keep a listed file if it's not in the ledger, if its `lastModifiedDateTime` ≥ watermark, or if its
   modified date is **unknown** (keep it and show it at Gate A as "date unknown"). In a maintain run the date
-  lookup is needed even for ledger-known files, because it is how a *changed* file is detected.
+  is needed even for ledger-known files, because it is how a *changed* file is detected. To keep the cost
+  down, run **one** `sharepoint_search` per folder with `afterDateTime = watermark` first. A listed file
+  that appears in those results has its date. Look up by name only the listed files that did not appear;
+  a listed file that is in the ledger and did not appear in those results was not modified since the
+  watermark, so it can be skipped without a lookup.
   Classification is by Location (`file:///…`) and `mod:` fingerprint, like any SharePoint item. An
   edited transcript file (new `mod:`) is **changed** and supersedes the old row as usual.
 - **Slide decks:** `sharepoint_search` with `fileType` `pptx`, then `pdf`, narrowed by

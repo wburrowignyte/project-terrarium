@@ -54,10 +54,8 @@ context_paths:
   - "docs/context/**/*.md"
 
 sharepoint:
-  transcript_folders:       # folders where meeting transcripts (.docx / .vtt / .txt) are saved
-    - "Meeting Transcripts"   # example only: replace with the user's folder, or leave the list empty
-  transcript_queries:       # content/name keywords that identify project meetings, e.g. series titles
-    - "Data Workshop"
+  transcript_folders: []    # folders where meeting transcripts (.docx / .vtt / .txt) are saved, e.g. ["Meeting Transcripts"]; fill from the user's answer
+  transcript_queries: []    # content/name keywords that identify project meetings, e.g. ["Data Workshop"]; fill from the user's answer
   folders: []               # optional: pinned folders for doc search
   deck_folders: []          # optional: folders where slide decks are uploaded (narrows pptx/pdf search)
   doc_queries:              # content searches for supporting documents

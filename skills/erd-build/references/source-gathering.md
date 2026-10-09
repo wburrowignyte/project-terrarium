@@ -36,8 +36,8 @@ to `transcript_queries`, and set `transcript_folders` to scope the search to whe
    is a file. Don't treat any dot in the name as an extension: folders such as `v1.2` or `Q3.2026` are common. If more than one
    folder matches, show them at Gate A with their paths and let the user pick. If none match,
    report it.
-2. **Search.** For each `fileType` in `docx`, `txt`, and also `vtt` unless a previous run found
-   that the connector can't read `.vtt` (then find `.vtt` files by listing only and report them under Not included):
+2. **Search.** For each `fileType` in `docx` and `txt` (don't search `vtt`: find `.vtt` files with the
+   listing pass only, since the connector's text reads don't cover `.vtt`, see step 7):
    - with folders: `sharepoint_search(query = <project name or each transcript_query>, fileType, folderName = <folder>)`
    - with no folders: `sharepoint_search(query = <each transcript_query>, fileType)`
    - add `afterDateTime` / `beforeDateTime` from the run scope or the user's filter argument
@@ -59,7 +59,8 @@ to `transcript_queries`, and set `transcript_folders` to scope the search to whe
      `sharepoint_search(query = <file name>, folderName = <its folder>)`. If that finds nothing, show the
      date as unknown at Gate A and keep the file as a candidate. **A ledger row is never written with an
      empty Fingerprint:** the `mod:` value is taken from `read_resource` or the search hit when the file is read
-     and staged. If neither gives a modified date, use `sha256:<12 hex>` of the staged text instead.
+     and staged. If neither gives a modified date, use `sha256:<12 hex>` of the **raw `read_resource` text** (before any
+     normalization), so it can be recomputed from the remote file.
    - With no `transcript_folders` configured there is nothing to list, so discovery rests on the search
      alone. Say so in the Gate A notice.
 3. **Classify a hit as a transcript** when it's in a transcript folder, **or** its name or first page
@@ -147,12 +148,21 @@ spaces, then text). Take the speaker from the text between the previous double-s
 marker. Don't assume `First Last`: labels also look like `Last, First M (ORG)`. Normalize to one line per
 utterance, `[HH:MM:SS] Speaker: text`. `M:SS` becomes `00:MM:SS` (`1:02` → `00:01:02`) and `H:MM:SS`
 becomes `HH:MM:SS` (`1:02:07` → `01:02:07`). A `.vtt` normalizes the same way, using the cue start time.
-**Sanity-check the result before staging.** Timestamps must be non-decreasing, the last timestamp should be
-close to the duration in the header (when there is one), and no utterance should be empty. A marker-like
-string inside speech (for example a spoken "3:30 appointment" after two spaces) can cause a false split, and
-this check catches the worst cases. If any check fails, don't emit timestamps: stage the transcript untimed
-instead. If a transcript has no timestamps, stage it as is and add `no timestamps; cite by §<speaker turn n>`
-to its header. The analyst then cites `[S<n> §turn <k>]`; `erd-format.md` defines the numbering.
+**Sanity-check the result before staging.**
+- Timestamps are non-decreasing.
+- No utterance is empty.
+- When the header has a duration (Teams writes it as `<n>h <n>m <n>s`, `<n>m <n>s` or `<n>s`, right after
+  the meeting date), the last timestamp is at most the duration plus 60 s and at least 50% of it.
+
+A marker-like string inside speech (for example a spoken "3:30 appointment" after two spaces) can cause a
+false split, and these checks catch the worst cases. If any check fails, don't emit timestamps.
+
+**Untimed staging.** Stage the transcript with the same marker split, but strip the timestamps: one turn per
+line, `Speaker: text`, merging consecutive lines by the same speaker into one turn. Add
+`no timestamps; cite by §turn <k>` to the header. If no speaker markers can be found at all, stage
+each non-empty source line as its own turn. `k` is the 1-based line number among the turn lines, so it can
+be re-derived from the staged file. The analyst then cites `[S<n> §turn <k>]`; `erd-format.md` defines the
+numbering.
 
 **Slide decks** stage as one `## Slide <k>: <title>` section per slide (1-based), then the body
 text, tables, and the speaker notes as `**Notes:** <text>`. A slide with under ~15 words **and** a
@@ -216,12 +226,18 @@ Global source registry for this ERD. IDs are permanent and never reused. Metadat
 - **Moved, renamed or re-saved transcripts.** Identity is by Location, so a re-download saved under a new
   name or folder looks like a new source. When a new transcript hit has the same exact meeting date and a
   similar title as an **active** transcript row with a different Location, show it at Gate A as "possibly
-  the same meeting as S<n>". The user picks **new source** or **replaces S<n>**. If the file at the old
-  Location still exists, it's a different file: treat the hit as new. "Replaces" supersedes the old row as a
+  the same meeting as S<n>". *Similar* means: case-fold both titles, strip the date, the words
+  `Transcript`, `Transcription` and `Meeting Recording`, the file extension and punctuation, then the
+  results are equal or one contains the other. The user picks **new source** or **replaces S<n>**. First
+  check that the file at the old Location is gone with a **listing** of its folder (no content read). If it
+  still exists, it's a different file: treat the hit as new. "Replaces" supersedes the old row as a
   *changed* source: new ID, old row `superseded by S<new>`.
 - **Matching:** a source is *known* if its **Location** is already in the ledger. If its
   Fingerprint matches the active row, it is unchanged. If the Fingerprint differs, it is *changed*:
-  it gets a new ID, and the old row becomes `superseded by S<new>`.
+  it gets a new ID, and the old row becomes `superseded by S<new>`. Compare fingerprints only of the **same
+  kind**. If the kinds differ (for example a `sha256:` row and a `mod:` value from discovery), the result is
+  *unknown*, not *changed*: re-read the file once and compare `sha256:` hashes of the raw text, or treat the
+  source as known and update the row's Fingerprint in place to the `mod:` value, keeping its ID.
 - **IDs are never reused**, even when superseded. Old citations to a superseded ID keep resolving.
 - **Staged text may be missing.** Staging is git-ignored and local, so `<staging_dir>/<Ingested>/<Staged file>`
   won't exist on another machine or a fresh clone. Treat a missing staged file as a normal case: don't
