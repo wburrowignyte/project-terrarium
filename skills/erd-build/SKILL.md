@@ -1,6 +1,6 @@
 ---
 name: erd-build
-description: Build (or regenerate) the project's ERD from Teams meeting transcripts, project context MD files, and SharePoint docs, then have an Appian architect review it for structural risk. Two agents run in sequence — erd-analyst (developer + BA) writes a cited ERD.md; appian-erd-reviewer returns a risk register and verdict — with a human gate and up to one revision round. Use when the user wants to create, generate, build, or rebuild the ERD / data model / entity relationship diagram for the project.
+description: Build (or regenerate) the project's ERD from meeting transcripts saved in SharePoint, project context MD files, and SharePoint docs, then have an Appian architect review it for structural risk. Two agents run in sequence — erd-analyst (developer + BA) writes a cited ERD.md; appian-erd-reviewer returns a risk register and verdict — with a human gate and up to one revision round. Use when the user wants to create, generate, build, or rebuild the ERD / data model / entity relationship diagram for the project.
 argument-hint: "[meeting/topic filter] [since <date>]"
 ---
 

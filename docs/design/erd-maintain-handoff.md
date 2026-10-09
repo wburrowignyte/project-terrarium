@@ -1,5 +1,7 @@
 # Handoff: build the ERD maintain module
 
+> **Note (2026-10-09):** Transcript sourcing superseded by `sharepoint-transcripts-handoff.md` (issue #5): the calendar/`meetingTranscriptUrl` path and `event:` fingerprints were removed.
+
 You are implementing the **ERD maintain** module of the `project-terrarium` Claude Code plugin.
 The full design rationale is in [`erd-maintain.md`](erd-maintain.md). Read it once for context.
 **This handoff is the build spec. Where the two differ, this file wins.** Every decision you need

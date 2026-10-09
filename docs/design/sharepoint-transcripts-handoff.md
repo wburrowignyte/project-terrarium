@@ -173,3 +173,30 @@ and this handoff.
 
 ## Implementation notes
 (Builder: record decisions, connector findings from §7.1, and deviations here.)
+
+**Connector findings (§7.1), 2026-10-09.** Run against `Client Work/MN DHS Appeals Case Management`
+only; formats recorded, no content kept.
+- `sharepoint_search` / `sharepoint_folder_search` / `read_resource` match the §2 signatures.
+- `sharepoint_folder_search` **returns files as well as folders** when names match, so step 1 of
+  discovery now keeps only folder hits. `sharepoint_search(folderName=…)` is a **partial name match
+  and leaked a hit from another library** (`Ignyte Proposals`); discovery now checks each hit's `webUrl`
+  against the resolved folder path.
+- Real transcripts are `.docx`, saved in per-meeting subfolders (e.g. `Discovery and Design/<n>. <Topic>_<MMDDYYYY>/`),
+  named like `…_Transcript_10072026.docx`. That is not Teams' default name, so date parsing also accepts `MMDDYYYY` after `_`.
+- A `.docx` read returns **flattened text** with no usable line breaks: a title/duration header, then
+  `<Speaker>   <H:MM:SS or M:SS>  <text>` runs. Timestamps are unpadded (`0:09`, `1:02:07`). The footer was
+  `[pages 1–1 of 53]` with `endPage` set (a 1.5 h meeting is about 53 pages). Staging therefore splits on speaker/timestamp
+  markers and zero-pads to `[HH:MM:SS]`; checked on a synthetic string only.
+- **No `.vtt` or `.txt` exists in the folder, so the `.vtt` read behaviour is unverified.** The spec's
+  conservative rule (try one read, else list under Not included) is in place. The `Recordings` folder listing was empty.
+
+**Verification.** `claude plugin validate .` passes. Final grep hits only the alias text, the legacy-row
+rule, the superseded notes and the historical design docs. An end-to-end `/project-terrarium:erd-build` on a
+copy of the sample project completed with local transcripts only: 66 `[S3/S4 @HH:MM:SS]` citations, no
+calendar call, no deprecation warning. **Not run:** §7.3 (deprecation alias), §7.4 (maintain fixtures),
+§7.5 (legacy ledger row), and a live build against the SharePoint folder.
+
+**Deviations / follow-ups.**
+- `docs/TECH_DEBT.md` is not on `dev`; TD-1 not updated.
+- Remove the `meeting_series` alias in the next minor version.
+- Plugin version bumped 0.4.0 → 0.5.0.

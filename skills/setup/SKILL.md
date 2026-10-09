@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Configure the project-terrarium plugin for this project repo — write project-terrarium.yaml (project prefix, target DB, context MD locations, SharePoint/Teams source hints, output and staging paths), git-ignore the staging area, and verify the Microsoft 365 connector and Appian docs tools are reachable. Run once per project repo before /project-terrarium:erd-build.
+description: Configure the project-terrarium plugin for this project repo — write project-terrarium.yaml (project prefix, target DB, context MD locations, SharePoint source hints, output and staging paths), git-ignore the staging area, and verify the Microsoft 365 connector and Appian docs tools are reachable. Run once per project repo before /project-terrarium:erd-build.
 disable-model-invocation: true
 ---
 
@@ -16,8 +16,8 @@ Work one question at a time. Explore first, propose values, and confirm before y
 - Look for an existing `project-terrarium.yaml`. If one exists, show it and ask what to change.
 - Find likely context MD files: Glob `**/*.md`, excluding `node_modules`, `.git`, and the staging dir. Look for
   `CONTEXT.md`, `glossary*`, `domain*`, `docs/context/**`, `outputs/CONTEXT.md`. Propose `context_paths` globs.
-- Check that the Microsoft 365 connector tools are available (`outlook_calendar_search`,
-  `sharepoint_search`, `read_resource`). If they aren't, tell the user to connect the Microsoft 365 connector
+- Check that the Microsoft 365 connector tools are available (`sharepoint_search`,
+  `sharepoint_folder_search`, `read_resource`). If they aren't, tell the user to connect the Microsoft 365 connector
   in their Claude connector settings. `local_inputs` still works without it.
 - Check for `search_appian_knowledge_sources` (Appian docs MCP). It's optional; the reviewer falls back to its checklist.
 
@@ -27,7 +27,10 @@ Work one question at a time. Explore first, propose values, and confirm before y
 2. **Target database** (Oracle / MySQL / SQL Server / PostgreSQL / unknown). Oracle enables the 30-char rule.
 3. **Appian capability tier** if known (Standard / Advanced / Premium / unknown). This drives sync-volume findings.
 4. Confirm the `context_paths` globs.
-5. **Teams meeting series** to pull transcripts from (subject keywords, e.g. "DHS Data Workshop").
+5. Where are meeting transcripts saved in SharePoint (folder names)? And what keywords identify the
+   project's meetings (e.g. "DHS Data Workshop")? Explain the expected practice: the team downloads each
+   meeting's transcript (Teams/Stream → Transcript → Download `.docx` preferred, or `.vtt`) and saves
+   it to that folder.
 6. **SharePoint**: pinned folder name(s) to narrow searches, and doc topics to search
    (e.g. "data dictionary", "requirements", "business rules").
    6b. **Slide decks**: where are they uploaded? (folder names, optional; narrows the pptx/pdf search)
@@ -84,7 +87,7 @@ Create `.project-terrarium/inputs/`, `<erd_dir>/reviews/` and `<erd_dir>/changes
 ## 4. Verify
 
 - `git check-ignore .project-terrarium/staging/x` succeeds.
-- If the M365 connector is available, run one `outlook_calendar_search` for the first meeting series
-  (limit 3) and report how many events were found and whether they have `meetingTranscriptUrl`.
-  Don't read transcript content during setup.
+- If the M365 connector is available, run one `sharepoint_folder_search` per transcript folder and one
+  `sharepoint_search` (`fileType: docx`, limit 3). Report the folder and hit counts. Don't read
+  content during setup.
 - Finish by telling the user to run `/project-terrarium:erd-build`, and `/project-terrarium:erd-maintain` for later updates.

@@ -1,6 +1,6 @@
 ---
 name: erd-maintain
-description: Incrementally update the project's existing ERD from sources added since the last run — new Teams meeting transcripts, uploaded slide decks, and SharePoint docs. Proposes a change set (additive / modifying / breaking / conflict) for the user to accept or reject, applies only accepted changes with stable IDs, then runs a delta Appian review. Use when the user wants to update, refresh, maintain, or sync the ERD with new meetings or decks.
+description: Incrementally update the project's existing ERD from sources added since the last run — new meeting transcripts in SharePoint, uploaded slide decks, and SharePoint docs. Proposes a change set (additive / modifying / breaking / conflict) for the user to accept or reject, applies only accepted changes with stable IDs, then runs a delta Appian review. Use when the user wants to update, refresh, maintain, or sync the ERD with new meetings or decks.
 argument-hint: "[since:<YYYY-MM-DD>] [meeting/topic filter]"
 ---
 
@@ -39,7 +39,7 @@ only (ID-to-be, kind, title, date, location, new/changed). For known sources, gi
 Get the user's confirmation or pruning **before** reading any full content.
 
 If nothing is new or changed, report "ERD v<n> is current as of <watermark>; nothing new found",
-list any "Not included" items (e.g. meetings without transcripts), and **stop without writing
+list any "Not included" items (e.g. recordings without a transcript file), and **stop without writing
 anything**.
 
 ## Step 3: Stage

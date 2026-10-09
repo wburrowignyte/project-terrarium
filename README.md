@@ -17,9 +17,9 @@ Status is the module's own version; the plugin version is in `.claude-plugin/plu
 ## ERD build workflow
 
 ```
-Teams transcripts ─┐
-SharePoint docs  ──┼─► stage (git-ignored) ─► erd-analyst ─► ERD.md ─► appian-erd-reviewer ─► review
-Context MD files ──┘        ▲ Gate A: confirm sources                     ▼ Gate B: send findings back?
+Meeting transcripts (SharePoint) ─┐
+SharePoint docs  ─────────────────┼─► stage (git-ignored) ─► erd-analyst ─► ERD.md ─► appian-erd-reviewer ─► review
+Context MD files ─────────────────┘        ▲ Gate A: confirm sources                     ▼ Gate B: send findings back?
                                                        erd-analyst (revise) ◄┘ (max 2 review rounds)
 ```
 
@@ -32,7 +32,9 @@ The contract between the agents is [erd-format.md](skills/erd-build/references/e
 The reviewer works from [appian-risk-checklist.md](skills/erd-build/references/appian-risk-checklist.md).
 
 ### Sources
-- **Teams transcripts** come through the Microsoft 365 connector: calendar event → `meetingTranscriptUrl` → transcript.
+- **Meeting transcripts** are read as files from SharePoint/OneDrive folders through the Microsoft 365
+  connector. The team downloads each meeting's transcript (`.docx` preferred) to the configured folder.
+  Calendar/Teams meeting access isn't used.
   Exported `.vtt`/`.docx` files in SharePoint, or dropped into `.project-terrarium/inputs/`, also work.
 - **SharePoint/OneDrive docs** (data dictionaries, requirements) come from content search, optionally narrowed to pinned folders.
 - **Context MD files** come from globs in the consumer repo. Glossary terms set the ERD vocabulary.
@@ -97,7 +99,7 @@ Then, inside Claude Code in the project repo:
 1. `/project-terrarium:setup` writes `project-terrarium.yaml` and the `.gitignore` entries.
 2. `/project-terrarium:erd-build [topic] [since <date>]`
 
-Prerequisites: the Microsoft 365 connector (for Teams/SharePoint). The Appian docs MCP
+Prerequisites: the Microsoft 365 connector (SharePoint/OneDrive access). The Appian docs MCP
 (`search_appian_knowledge_sources`) is optional; with it, the reviewer cites Appian docs.
 
 ## Develop / test
