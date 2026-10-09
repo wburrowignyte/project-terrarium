@@ -22,7 +22,7 @@
   - Reply is at most 4 lines.
 - [ ] **"Also rename E-9.address to providerAddress."** Class breaking. The assistant states the effect in one line (field row,
   Mermaid `ADDRESS` column unchanged if only the record field is renamed) and proceeds.
-  - DEC-6 appended. `[DEC-6]` added to the row. DEC-2 is already superseded, so no supersede question.
+  - DEC-6 appended. `[DEC-6]` added to the row. No active DEC touches `E-9.address`, so no supersede question.
   - **No second Version bump.** Version stays 2, and the Change log row now reads `assist DEC-5–DEC-6`.
 - [ ] **"Change E-11.authorizedHoursPerWeek to Decimal."** The assistant asks once: "This reverses DEC-1 (Store authorized hours as
   whole-hour Integer). Supersede it?" On yes:

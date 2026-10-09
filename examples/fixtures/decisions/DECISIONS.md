@@ -18,7 +18,7 @@ IDs are permanent and never reused. No PII/PHI, no source text.
 |---|---|---|---|---|
 | DEC-4 | 2026-09-24 | Active | E-2 R-2 | A household member belongs to exactly one household; never share members across households |
 | DEC-3 | 2026-09-23 | Active | global | No free-text fields on reference tables; reference tables hold only ID and NAME |
-| DEC-2 | 2026-09-22 | Superseded by DEC-4 | E-9.address | Keep provider contact details on the provider row, not in a separate table |
+| DEC-2 | 2026-09-22 | Superseded by DEC-4 | E-2.householdId | A household member may belong to more than one household |
 | DEC-1 | 2026-09-21 | Active | E-11.authorizedHoursPerWeek | Store authorized hours as whole-hour Integer |
 
 ## Decisions
@@ -34,16 +34,16 @@ IDs are permanent and never reused. No PII/PHI, no source text.
 - **Rationale:** The eligibility rules in the program overview authorize whole hours only.
 - **Alternatives rejected:** Decimal hours (no current business need).
 
-### DEC-2 Provider contact details stay on the provider
+### DEC-2 Members may span households
 - **Status:** Superseded by DEC-4
 - **Date:** 2026-09-22
-- **Affects:** E-9.address
+- **Affects:** E-2.householdId
 - **Supersedes:** —
 - **Origin:** assist session
 - **ERD version:** 2
-- **Decision:** Keep provider contact details on the provider row, not in a separate table.
-- **Rationale:** One address per provider in this release.
-- **Alternatives rejected:** A provider location table (extra joins, no source asks for it).
+- **Decision:** A household member may belong to more than one household.
+- **Rationale:** Families split custody, so a child could appear in two households.
+- **Alternatives rejected:** One household per member (see DEC-4, which later replaced this rule).
 
 ### DEC-3 No free text on reference tables
 - **Status:** Active
@@ -64,5 +64,5 @@ IDs are permanent and never reused. No PII/PHI, no source text.
 - **Origin:** assist session
 - **ERD version:** 2
 - **Decision:** A household member belongs to exactly one household; never share members across households.
-- **Rationale:** Record-level security is evaluated per household, and shared members would break it. This round also retires DEC-2, which no longer applies.
+- **Rationale:** Record-level security is evaluated per household, and shared members would break it. This reverses DEC-2 after the security review.
 - **Alternatives rejected:** A household-membership junction table (many-to-many).
