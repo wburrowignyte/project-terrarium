@@ -11,6 +11,7 @@ and receives the outputs.
 | ERD build | `/project-terrarium:erd-build` | v0.2 |
 | ERD maintain | `/project-terrarium:erd-maintain` | v0.2 |
 | ERD view (ERD.md to interactive HTML) | `/project-terrarium:erd-view` | v0.2 |
+| ERD assist | `/project-terrarium:erd-assist` | v0.1 |
 
 Status is the module's own version; the plugin version is in `.claude-plugin/plugin.json`.
 
@@ -84,7 +85,33 @@ node tools/erd-view/erd-view.mjs ERD.md -o out.html --open
 ```
 
 Or run `/project-terrarium:erd-view`. `ERD.html` is git-ignored because it embeds the ERD text.
-Tests: `node --test "tools/erd-view/test/*.test.mjs"`.
+Tests: `node --test "tools/*/test/*.test.mjs"` (all tools).
+
+## ERD assist
+
+After a build or maintain run, `/project-terrarium:erd-assist` lets you iterate on the ERD in conversation. It runs in your
+main session (no subagent) and edits `ERD.md` itself with targeted edits.
+
+```
+brief (what the last run changed) ─► discuss (slices, recommendations) ─► change + DEC (you say "make it") ─► validate + re-render
+```
+
+- **Technical Decisions log.** `erd/DECISIONS.md` is committed and **binding**. A compact Index (newest first, one
+  line per decision) sits above the full blocks. It is append-only: a decision changes only by a new one that
+  supersedes it. Build, revise, maintain, apply and the reviewer read the Active rows and never silently override
+  one; a contradicting source becomes an open question or a `conflict` op. Elements set by a decision cite `[DEC-n]`.
+  The contract is [decisions-format.md](skills/erd-assist/references/decisions-format.md).
+- **Context budget.** The assistant never reads `ERD.md` or `DECISIONS.md` in full. It uses slices from `erd-slice` and
+  one-line Index reads, so cost stays flat as the ERD grows.
+- **One version per session.** The first write bumps the ERD Version and adds a Change log row `assist DEC-a–DEC-b`;
+  later writes in the same session extend that row.
+
+```bash
+node tools/erd-assist/erd-slice.mjs erd/ERD.md [--outline] [--log N] [--ids E-3,R-5,Q-2] [--neighbors] [--find text] \
+  [--next-ids] [--check [ids]] [--decisions erd/DECISIONS.md]
+```
+
+Tests: `node --test "tools/*/test/*.test.mjs"`.
 
 ## Deprecations
 
@@ -111,6 +138,7 @@ Prerequisites: the Microsoft 365 connector (SharePoint/OneDrive access). The App
 ## Develop / test
 
 - `claude plugin validate .`
+- `node --test "tools/*/test/*.test.mjs"` runs the `erd-view` and `erd-assist` tool tests.
 - `examples/sample-project/` is a synthetic consumer repo (child care assistance, no real data).
   Run `claude --plugin-dir <this repo>` from inside it, then `/project-terrarium:erd-build`.
 - `examples/fixtures/flawed-ERD.md` is an ERD with 6 seeded defects (listed in its header comment) for
