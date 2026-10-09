@@ -217,3 +217,15 @@ config was not modified.
 - `docs/TECH_DEBT.md` is not on `dev`; TD-1 not updated.
 - Remove the `meeting_series` alias in the next minor version.
 - Plugin version bumped 0.4.0 → 0.5.0.
+
+**Live discovery dry run (stopped at Gate A, 2026-10-09).** Scoped to `Client Work/MN DHS Appeals Case Management`;
+no transcript content read. Findings:
+- **Search recall is unreliable.** Repeating `sharepoint_search(query="transcript", fileType=docx, folderName=<folder>)`
+  returned different sets on different calls (totals 18, then 14), and the 14-hit run missed real transcripts.
+  `query="started transcription"` (scoped to `Discovery and Design`) found 5 of the 7 known transcripts. One more
+  (`…Case Intake _ Assignment-20261007_Transcription.docx`, 5 MB) appeared **only** in a folder listing via `read_resource`.
+  Search alone can miss transcripts; consider also listing each resolved `transcript_folders` folder (and its subfolders)
+  with `read_resource` as a second discovery pass. **Not yet in the spec; needs a decision.**
+- `folderName` filters leak: hits from `Ignyte Proposals/…` and `Shared Documents/Forms/…` came back; all were dropped by the `webUrl` check.
+- Transcripts are named inconsistently (`…_Transcript_10072026`, `…_transcript_10022026`, `…_10052026`, no date, `…_Transcription.docx`),
+  so date parsing falls back to the `Meeting Recording` header date or `lastModifiedDateTime` fairly often.
