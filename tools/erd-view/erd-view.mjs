@@ -18,7 +18,9 @@ export function render(md) {
   const tpl = readFileSync(join(here, 'lib', 'template.html'), 'utf8');
   // Escape characters that could terminate the inline <script> or be misread by the HTML parser.
   const json = JSON.stringify(model).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
-  return { model, html: tpl.replace('/*__MODEL__*/null', () => json) };
+  // The layout module is DOM-free so tests can run it in Node; the browser gets it inlined, minus `export`.
+  const layout = readFileSync(join(here, 'lib', 'layout.mjs'), 'utf8').replace(/^export /gm, '');
+  return { model, html: tpl.replace('/*__LAYOUT__*/', () => layout).replace('/*__MODEL__*/null', () => json) };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

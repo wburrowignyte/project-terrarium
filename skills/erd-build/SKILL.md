@@ -60,7 +60,8 @@ Launch the `erd-analyst` subagent (foreground; you need its result). The prompt 
 (absolute), the `project` block, and any focus from `$ARGUMENTS`. If `ERD.md` already exists, tell it
 to preserve IDs and increment the version.
 
-When it returns, verify that `ERD.md` exists and has the required sections. Check that
+When it returns, verify that `ERD.md` exists and has the required sections, including `## Groups`, and that every entity except the lookup table has
+a `Group` bullet. Check that
 every `[S<n>` citation resolves to the ledger: grep for citations and compare them with the
 ledger IDs. If either check fails, send the agent back once with the specific problem.
 

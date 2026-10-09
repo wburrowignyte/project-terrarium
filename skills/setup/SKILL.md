@@ -44,6 +44,7 @@ project:
   prefix: "DHS"
   database: "Oracle"        # Oracle | MySQL | SQL Server | PostgreSQL | unknown
   appian_tier: "unknown"    # Standard | Advanced | Premium | unknown
+  # lookup_table: "DHS_LOOKUP"   # name for the shared lookup table (default <prefix>_LOOKUP); its Kind must be Lookup
 
 context_paths:
   - "docs/context/**/*.md"

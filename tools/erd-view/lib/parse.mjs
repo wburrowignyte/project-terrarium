@@ -1,6 +1,8 @@
 // Parse an ERD.md (see skills/erd-build/references/erd-format.md) into a plain model.
 // Primary source: Entities + Relationships tables. Fallback/gap-fill: the mermaid erDiagram block.
 
+import { kindOf } from './layout.mjs';
+
 const norm = (s) => (s ?? '').trim();
 const stripTicks = (s) => norm(s).replace(/^`+|`+$/g, '');
 
@@ -35,6 +37,11 @@ function bullet(body, label) {
   return m ? m[1].trim() : '';
 }
 
+const withLookup = (f) => {
+  const m = (f.key || '').match(/^FK→LOOKUP:(\S+)/);
+  return m ? { ...f, lookupType: m[1] } : f;
+};
+
 const colKey = (row, ...names) => {
   for (const k of Object.keys(row)) if (names.some((n) => k.toLowerCase().startsWith(n))) return row[k];
   return '';
@@ -55,7 +62,8 @@ export function parseMermaid(md) {
       const a = line.match(/^(\S+)\s+(\S+)(?:\s+(.*))?$/);
       if (a) {
         const rest = (a[3] ?? '').replace(/"[^"]*"/g, '').split(/[\s,]+/).filter(Boolean);
-        cur.fields.push({ type: a[1], column: a[2], key: rest.filter((r) => /^(PK|FK|UK)$/.test(r)).join(',') });
+        const lk = (a[3] ?? '').match(/"LOOKUP:\s*([^"\s]+)\s*"/);
+        cur.fields.push({ type: a[1], column: a[2], key: rest.filter((r) => /^(PK|FK|UK)$/.test(r)).join(','), ...(lk ? { lookupType: lk[1] } : {}) });
       }
       continue;
     }
@@ -85,7 +93,7 @@ function endCard(tok, side) {
 
 export function parseErd(md) {
   const warnings = [];
-  const model = { title: '', meta: {}, summary: '', entities: [], relationships: [], assumptions: [], questions: [], deferred: '', changeLog: [], warnings };
+  const model = { title: '', meta: {}, summary: '', groups: [], groupsDerived: false, lookupId: null, entities: [], relationships: [], assumptions: [], questions: [], deferred: '', changeLog: [], warnings };
   model.title = (md.match(/^# (.+)$/m) ?? [])[1]?.trim() ?? 'ERD';
 
   const h2 = Object.fromEntries(sections(md, 2).map((s) => [s.title.toLowerCase(), s.body]));
@@ -107,13 +115,13 @@ export function parseErd(md) {
     const e = {
       id: m[1], name: m[2], table: m[3],
       purpose: bullet(s.body, 'Purpose'), kind: bullet(s.body, 'Kind'), volume: bullet(s.body, 'Est\\. volume'),
-      sensitivity: bullet(s.body, 'Sensitivity'), sources: bullet(s.body, 'Sources'),
+      sensitivity: bullet(s.body, 'Sensitivity'), sources: bullet(s.body, 'Sources'), group: bullet(s.body, 'Group'), isLookup: false,
       deprecated: /^deprecated/i.test(bullet(s.body, 'Status')) ? bullet(s.body, 'Status') : '',
       fields: parseTable(s.body).map((r) => ({
         field: colKey(r, 'field'), column: stripTicks(colKey(r, 'column')), type: colKey(r, 'type'),
         req: /^y/i.test(colKey(r, 'req')), key: colKey(r, 'key'), description: colKey(r, 'description'), sources: colKey(r, 'sources'),
         deprecated: /^deprecated/i.test(colKey(r, 'description')),
-      })).filter((f) => f.column),
+      })).filter((f) => f.column).map(withLookup),
     };
     byId.set(e.id, e); byTable.set(e.table, e); model.entities.push(e);
   }
@@ -142,11 +150,11 @@ export function parseErd(md) {
   for (const [table, me] of mm.entities) {
     let e = byTable.get(table);
     if (!e) {
-      e = { id: `E-${++next}`, name: table, table, purpose: '', kind: '', volume: '', sensitivity: '', sources: '', deprecated: '', fields: [], fromMermaidOnly: true };
+      e = { id: `E-${++next}`, name: table, table, purpose: '', kind: '', volume: '', sensitivity: '', sources: '', group: '', isLookup: false, deprecated: '', fields: [], fromMermaidOnly: true };
       byTable.set(table, e); byId.set(e.id, e); model.entities.push(e);
       warnings.push(`${table}: only in Mermaid block (no Entities section)`);
     }
-    if (!e.fields.length) e.fields = me.fields.map((f) => ({ field: '', column: f.column, type: f.type, req: false, key: f.key, description: '', sources: '' }));
+    if (!e.fields.length) e.fields = me.fields.map((f) => ({ field: '', column: f.column, type: f.type, req: false, key: f.key, description: '', sources: '', ...(f.lookupType ? { lookupType: f.lookupType } : {}) }));
   }
   const pairSig = (x) => [byId.get(x.from)?.table, byId.get(x.to)?.table].sort().join('|');
   const claimed = new Set(); // table relationships already matched to a Mermaid edge
@@ -178,9 +186,108 @@ export function parseErd(md) {
     const m = f.key.match(/FK→(E-\d+)/);
     if (m && !byId.has(m[1])) warnings.push(`${e.table}.${f.column}: FK targets unknown ${m[1]}`);
   }
+  groupsAndLookup(model, find('groups'), byId);
   model.changeLog = parseTable(find('change log')).filter((r) => Object.values(r).some(Boolean));
   for (const k of ['assumptions', 'questions']) {
     model[k] = parseTable(find(k === 'questions' ? 'open questions' : 'assumptions')).filter((r) => Object.values(r).some(Boolean));
   }
   return model;
+}
+
+// ---- groups and the shared lookup table
+function groupsAndLookup(model, groupsBody, byId) {
+  const { entities, relationships, warnings } = model;
+
+  // Lookup entity: Kind starts with "lookup", or the table ends with _LOOKUP.
+  const lk = entities.find((e) => /^lookup/i.test(e.kind)) ?? entities.find((e) => /_LOOKUP$/i.test(e.table));
+  if (lk) {
+    lk.isLookup = true; lk.group = '';
+    model.lookupId = lk.id;
+    for (const r of relationships) if (r.to === lk.id && r.from !== lk.id) r.lookup = true;
+  }
+  for (const e of entities) for (const f of e.fields) {
+    if (!f.lookupType) continue;
+    if (!lk) { warnings.push(`${e.table}.${f.column}: FK→LOOKUP:${f.lookupType} but no lookup entity (<PREFIX>_LOOKUP) exists`); continue; }
+    const has = relationships.some((r) => r.from === e.id && r.to === lk.id && [f.field, f.column].some((n) => n && r.fk && r.fk.toLowerCase() === n.toLowerCase()));
+    if (!has) warnings.push(`${e.table}.${f.column}: FK→LOOKUP has no Relationships row`);
+  }
+
+  // ## Groups
+  model.groups = parseTable(groupsBody)
+    .map((r) => ({ order: +colKey(r, 'order') || 0, name: colKey(r, 'group'), description: colKey(r, 'description') }))
+    .filter((g) => g.name)
+    .sort((a, b) => a.order - b.order);
+  const grouped = entities.filter((e) => !e.isLookup);
+  if (!grouped.some((e) => e.group)) { deriveGroups(model, byId); return; }
+
+  if (!model.groups.length) {
+    warnings.push('Entities have Group bullets but there is no ## Groups section; groups are ordered by first appearance');
+    for (const e of grouped) if (e.group && !model.groups.some((g) => g.name === e.group)) model.groups.push({ order: model.groups.length + 1, name: e.group, description: '' });
+  }
+  const known = new Set(model.groups.map((g) => g.name));
+  for (const e of grouped) {
+    if (!e.group) { warnings.push(`entity ${e.table}: no Group`); e.group = 'Other'; }
+    else if (!known.has(e.group)) warnings.push(`entity ${e.table}: Group "${e.group}" not in ## Groups`);
+  }
+  for (const g of model.groups) if (!grouped.some((e) => e.group === g.name)) warnings.push(`Group "${g.name}" in ## Groups has no entities`);
+  // Groups used but not listed (or "Other") still need a slot, after the listed ones.
+  for (const e of grouped) if (!model.groups.some((g) => g.name === e.group)) model.groups.push({ order: model.groups.length + 1, name: e.group, description: '' });
+}
+
+// Deterministic grouping for ERDs with no Group data. Order of operations is fixed (entity-ID order throughout).
+function deriveGroups(model, byId) {
+  const { entities, relationships } = model;
+  model.groupsDerived = true;
+  const num = (e) => +e.id.slice(2) || 0;
+  const ents = entities.filter((e) => !e.isLookup).sort((a, b) => num(a) - num(b));
+  const kind = new Map(ents.map((e) => [e.id, kindOf(e)]));
+  const rels = relationships.filter((r) => r.from !== r.to && kind.has(r.from) && kind.has(r.to));
+  const children = new Map(ents.map((e) => [e.id, []])), parents = new Map(ents.map((e) => [e.id, []]));
+  for (const r of rels) { children.get(r.to).push(r.from); parents.get(r.from).push(r.to); }
+  for (const l of children.values()) l.sort((a, b) => num(byId.get(a)) - num(byId.get(b)));
+  const group = new Map(), order = [];
+  // 1+2: every Core entity with no Core parent seeds a group named after it; one breadth-first walk from all seeds at once
+  // (so groups stay balanced). A Core/Junction/History entity joins the group of its first-reached parent.
+  const isSeed = (e) => kind.get(e.id) === 'Core' && !parents.get(e.id).some((p) => kind.get(p) === 'Core');
+  const walk = (queue) => {
+    while (queue.length) {
+      const v = queue.shift();
+      for (const c of children.get(v)) {
+        if (group.has(c) || kind.get(c) === 'Reference') continue;
+        group.set(c, group.get(v)); queue.push(c);
+      }
+    }
+  };
+  // A seed named like another group (or like a reserved bucket) is disambiguated with its entity ID.
+  const seed = (list) => {
+    for (const e of list) {
+      const name = order.includes(e.name) || e.name === 'Other' || e.name === 'Shared reference' ? `${e.name} (${e.id})` : e.name;
+      group.set(e.id, name); order.push(name);
+    }
+    walk(list.map((e) => e.id));
+  };
+  seed(ents.filter(isSeed));
+  // Core entities in a Core-only cycle have no seed: take the lowest unassigned one, repeat.
+  for (const e of ents) if (kind.get(e.id) === 'Core' && !group.has(e.id)) seed([e]);
+  // 3: Reference entities go to their only consumer group, or to "Shared reference" when used by 2+ groups.
+  const consumers = new Map(ents.map((e) => [e.id, []]));
+  for (const r of rels) consumers.get(r.to).push(r.from);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const e of ents) {
+      if (kind.get(e.id) !== 'Reference' || group.has(e.id)) continue;
+      const cs = consumers.get(e.id);
+      if (!cs.length || cs.some((c) => !group.has(c) && kind.get(c) !== 'Reference')) continue;
+      const gs = new Set(cs.filter((c) => group.has(c)).map((c) => group.get(c)));
+      if (!gs.size) continue;
+      group.set(e.id, gs.size > 1 ? 'Shared reference' : [...gs][0]); changed = true;
+    }
+  }
+  if ([...group.values()].includes('Shared reference')) order.push('Shared reference');
+  // 4: anything left.
+  for (const e of ents) if (!group.has(e.id)) group.set(e.id, 'Other');
+  if ([...group.values()].includes('Other')) order.push('Other');
+  for (const e of ents) e.group = group.get(e.id);
+  model.groups = order.map((name, i) => ({ order: i + 1, name, description: '' }));
 }

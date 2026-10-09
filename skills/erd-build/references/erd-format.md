@@ -19,6 +19,12 @@ structure exactly: section order, heading text, and table columns are what later
   data from transcripts.
 - **Never delete; deprecate.** Retired entities, fields, relationships, assumptions and questions
   stay in the document and are marked per *Deprecation* below.
+- **Groups are stable.** Every entity except the shared lookup belongs to one Group, listed in
+  `## Groups`. Don't rename or reorder Groups without a reason recorded in the Change log.
+- **Shared lookup.** One table per application, `<PREFIX>_LOOKUP`, holds every enumeration with
+  3+ values, each under its own `LOOKUP_TYPE`. Use a dedicated `<ENTITY>_STATUS` or reference table
+  **only** when the values carry extra attributes or relationships (for example allowed
+  transitions), and say why in that entity's Purpose.
 - **Stable IDs.** Each entity has an ID `E-<n>`, each relationship `R-<n>`, each question
   `Q-<n>`, each assumption `A-<n>`. Never renumber existing IDs; append new ones.
 
@@ -57,9 +63,37 @@ Use these unless the project config or a context MD file says otherwise. If they
 | Record type | `<PREFIX> <Entity Name>` (Title Case) | `DHS Case` |
 | Record field | camelCase; PK `id`; FK `<entity>Id`; boolean `is<X>`; `<x>Date` / `<x>At` | `caseStatusId` |
 | Status/ref table | `<ENTITY>_STATUS`, never a bare `STATUS` | `DHS_CASE_STATUS` |
+| Shared lookup | `<PREFIX>_LOOKUP` (one per application) | `DHS_LOOKUP` |
 
 Field types: use Appian types: `Integer`, `Decimal`, `Text`, `Extra Long Text`, `Boolean`,
 `Date`, `Date and Time`, `User`, `Group`, `Document`.
+
+## Shared lookup table
+
+`<PREFIX>_LOOKUP` has Kind `Lookup` and no Group. Its columns are fixed:
+
+| Column | Type | Notes |
+|---|---|---|
+| `ID` | Integer | PK |
+| `LOOKUP_TYPE` | Text | code-list name, for example `CASE_TYPE` |
+| `CODE` | Text | |
+| `LABEL` | Text | |
+| `SORT_ORDER` | Integer | |
+| `IS_ACTIVE` | Boolean | |
+
+plus the audit fields (cite `CONVENTION`).
+
+- An FK to it uses the column `<CONCEPT>_ID` and the Key cell **`FK→LOOKUP:<LOOKUP_TYPE>`**
+  (for example `FK→LOOKUP:CASE_TYPE`). The viewer and the reviewer both rely on this exact token.
+- Under the LOOKUP entity, add one small seed table per `LOOKUP_TYPE`, each preceded by a
+  `**<LOOKUP_TYPE>**` line. They come after the field table, because only the first table in an
+  entity section is read as its fields.
+- The Relationships table **still lists** a `many-to-one` row for every LOOKUP FK, because Appian
+  needs one relationship per FK. Only the diagram drops the line: the viewer marks the referencing
+  field inside its table instead.
+- The project config can override the name with `project.lookup_table` in `project-terrarium.yaml`. This tells the
+  analyst what to call the table; the viewer and reviewer recognise it by Kind `Lookup` (or a name ending `_LOOKUP`), so
+  give a renamed table Kind `Lookup`.
 
 ## Document structure
 
@@ -78,6 +112,18 @@ Field types: use Appian types: `Integer`, `Decimal`, `Text`, `Extra Long Text`, 
 ## Summary
 2–5 sentences: the business domain covered, the core entities, and what's still unsettled.
 
+## Groups
+
+| Order | Group | Description |
+|---|---|---|
+| 1 | Household | The family unit and its members |
+| 2 | Application & Eligibility | Requests for assistance and their determinations |
+
+(`Order` is left-to-right placement in the diagram. Give groups with the most cross-group
+relationships adjacent orders. Aim for 3–7 groups of 2–8 tables. Group by function (Case,
+Provider, Payment) and keep a Core table's dedicated children (its notes, history, status table) in
+its group.)
+
 ## Diagram
 
 ```mermaid
@@ -85,18 +131,22 @@ erDiagram
     DHS_CASE ||--o{ DHS_CASE_PARTICIPANT : "has"
     DHS_CASE {
         int ID PK
-        int CASE_STATUS_ID FK
+        int CASE_TYPE_ID FK "LOOKUP: CASE_TYPE"
         string CASE_NUMBER UK
     }
 ```
 (Use table names as Mermaid entity names. List every field with its type, plus PK, FK, or UK
-markers. Use crow's-foot cardinality matching the Relationships table.)
+markers. Use crow's-foot cardinality matching the Relationships table. Emit entity blocks in
+Group order, then Core, Junction, Reference, History/Audit within a group. **Omit relationship
+lines that target the LOOKUP table**, and mark each LOOKUP FK attribute with a quoted comment as
+shown. The LOOKUP entity block goes last.)
 
 ## Entities
 
 ### E-1 DHS Case (`DHS_CASE`)
 - **Purpose:** <one sentence>
-- **Kind:** Core | Reference | Junction | History/Audit
+- **Kind:** Core | Reference | Junction | History/Audit | Lookup (only the shared lookup table)
+- **Group:** <group name from ## Groups>
 - **Est. volume:** <rows / growth if sources say; else "unknown">
 - **Sensitivity:** None | PII | PHI | FTI | CJI (mark the highest present)
 - **Sources:** [S2 @00:05:10] [S1 §Case lifecycle]
@@ -105,7 +155,8 @@ markers. Use crow's-foot cardinality matching the Relationships table.)
 |---|---|---|---|---|---|---|
 | id | ID | Integer | Y | PK | Surrogate key | CONVENTION |
 | caseNumber | CASE_NUMBER | Text(20) | Y | UK | Human-facing case number | [S2 @00:06:02] |
-| caseStatusId | CASE_STATUS_ID | Integer | Y | FK→E-2 | Current status | [S2 @00:07:40] |
+| caseTypeId | CASE_TYPE_ID | Integer | Y | FK→LOOKUP:CASE_TYPE | Type of case | [S2 @00:07:40] |
+| householdId | HOUSEHOLD_ID | Integer | Y | FK→E-2 | Owning household | [S2 @00:07:55] |
 
 (Repeat for every entity. For reference tables, list the seed values below the table when the sources give them.)
 

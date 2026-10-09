@@ -7,9 +7,11 @@
 <title>ERD Viewer</title>
 <style>
 :root{--bg:#f6f7f9;--panel:#fff;--text:#1c2430;--muted:#657084;--border:#d6dbe3;--accent:#2563eb;--node:#fff;--node-border:#9aa5b5;--edge:#7b8698;--hl:#f59e0b;--match:#fde68a;
- --k-core:#2563eb;--k-ref:#0f8f7e;--k-junction:#7c3aed;--k-history:#b7791f;--k-other:#64748b;--warn:#b45309}
+ --k-core:#2563eb;--k-ref:#0f8f7e;--k-junction:#7c3aed;--k-history:#b7791f;--k-other:#64748b;--k-lookup:#d97706;--warn:#b45309;
+ --g0:rgba(100,116,139,.07);--g1:rgba(37,99,235,.06);--g2:rgba(15,143,126,.07);--g3:rgba(124,58,237,.06);--g4:rgba(183,121,31,.07);--g5:rgba(190,70,100,.06);--frame:#c3cad6}
 @media(prefers-color-scheme:dark){:root{--bg:#0f141b;--panel:#171e28;--text:#e3e8ef;--muted:#93a0b4;--border:#2b3544;--accent:#6ea0ff;--node:#1a2230;--node-border:#4a5a70;--edge:#7f8da3;--hl:#fbbf24;--match:#6b5a12;
- --k-core:#5b8cff;--k-ref:#2bb5a1;--k-junction:#a78bfa;--k-history:#e0a43a;--k-other:#8a97ab;--warn:#fbbf24}}
+ --k-core:#5b8cff;--k-ref:#2bb5a1;--k-junction:#a78bfa;--k-history:#e0a43a;--k-other:#8a97ab;--k-lookup:#f59e0b;--warn:#fbbf24;
+ --g0:rgba(148,163,184,.08);--g1:rgba(91,140,255,.08);--g2:rgba(43,181,161,.08);--g3:rgba(167,139,250,.08);--g4:rgba(224,164,58,.08);--g5:rgba(236,110,140,.08);--frame:#3a475a}}
 *{box-sizing:border-box}html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--text);font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
 header{display:flex;align-items:center;gap:14px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--border);flex-wrap:wrap}
@@ -46,6 +48,8 @@ td.mono,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;f
 #detail h2{font-size:16px;margin:0 0 2px}#detail .sub{color:var(--muted);margin-bottom:8px}
 #detail dl{display:grid;grid-template-columns:90px 1fr;gap:3px 8px;margin:8px 0}#detail dt{color:var(--muted)}#detail dd{margin:0}
 #detail{width:400px;overflow-x:hidden}#detail table{table-layout:fixed;word-break:break-word}#detail td,#detail th{padding:3px 6px;font-size:12px}#detail .rt td:nth-child(1){width:48px}#detail .rt td:nth-child(2){width:64px}
+.notice{background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--hl);border-radius:6px;padding:8px 12px;margin:0 0 12px}
+.lk{display:inline-block;border-radius:4px;padding:0 5px;font-size:11px;font-weight:700;background:var(--k-lookup);color:#fff}
 .link{color:var(--accent);cursor:pointer;text-decoration:none}.link:hover{text-decoration:underline}
 .warnlist li{margin:4px 0}.empty{color:var(--muted)}
 @media print{header,#filters,#detail,.toolbar,#mini,#status{display:none!important}svg#svg{height:100vh}}
@@ -62,7 +66,10 @@ td.mono,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;f
     <input type="search" id="q" placeholder="Entity or column…  ( / )" autocomplete="off" aria-label="Search entities and columns">
     <div id="results" role="listbox"></div>
     <h3>Kind</h3><div id="kinds"></div>
+    <h3>Group</h3><div id="groups"></div>
     <h3>Sensitivity</h3><div id="sens"></div>
+    <h3>Layout</h3>
+    <select id="layoutmode"><option value="grouped">Grouped</option><option value="compact">Compact (auto)</option></select>
     <h3>Fields shown</h3>
     <select id="fieldmode"><option value="keys">Key fields only</option><option value="all">All fields</option><option value="none">Names only</option></select>
     <h3>Relationship lines</h3>
@@ -100,29 +107,35 @@ const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS,
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
+/*__LAYOUT__*/
+
 const ents = MODEL.entities, rels = MODEL.relationships;
 const byId = new Map(ents.map((e) => [e.id, e]));
 const nbrs = new Map(ents.map((e) => [e.id, new Set()]));
 const relsOf = new Map(ents.map((e) => [e.id, []]));
+const drawnRels = rels.filter((r) => !r.lookup), dnbrs = new Map(ents.map((e) => [e.id, new Set()]));
+for (const r of drawnRels) { dnbrs.get(r.from)?.add(r.to); dnbrs.get(r.to)?.add(r.from); }
+const allGroups = (MODEL.groups.length ? MODEL.groups.map((g) => g.name) : [...new Set(ents.map((e) => e.group).filter(Boolean))]);
 for (const r of rels) { nbrs.get(r.from)?.add(r.to); nbrs.get(r.to)?.add(r.from); relsOf.get(r.from)?.push(r); if (r.to !== r.from) relsOf.get(r.to)?.push(r); }
-const kindOf = (e) => { const k = (e.kind || '').toLowerCase(); return k.startsWith('core') ? 'Core' : k.startsWith('ref') ? 'Reference' : k.startsWith('junc') ? 'Junction' : k.startsWith('hist') || k.startsWith('audit') ? 'History/Audit' : 'Unspecified'; };
-const kindVar = { 'Core': '--k-core', 'Reference': '--k-ref', 'Junction': '--k-junction', 'History/Audit': '--k-history', 'Unspecified': '--k-other' };
+const kindVar = { 'Core': '--k-core', 'Reference': '--k-ref', 'Junction': '--k-junction', 'History/Audit': '--k-history', 'Unspecified': '--k-other', 'Lookup': '--k-lookup' };
 const sensOf = (e) => { const m = (e.sensitivity || '').match(/PHI|PII|FTI|CJI/g); return m ? [...new Set(m)] : []; };
 const SENS = ['PHI', 'PII', 'FTI', 'CJI'];
 
 /* ---------- state ---------- */
-const state = { kinds: new Set(), sens: new Set(), fieldMode: ents.length > 40 ? 'none' : 'all', selected: null, focus: null, matches: new Set(), showIsolated: true, showDeprecated: true, edgeMode: rels.length > 80 ? 'selected' : 'all', tx: 0, ty: 0, k: 1 };
+const state = { kinds: new Set(), sens: new Set(), groups: new Set(allGroups), layout: 'grouped', fieldMode: ents.length > 40 ? 'none' : 'all', selected: null, focus: null, matches: new Set(), showIsolated: true, showDeprecated: true, edgeMode: drawnRels.length > 80 ? 'selected' : 'all', tx: 0, ty: 0, k: 1 };
 const allKinds = [...new Set(ents.map(kindOf))];
 allKinds.forEach((k) => state.kinds.add(k));
 SENS.concat(['None']).forEach((s) => state.sens.add(s));
 $('#fieldmode').value = state.fieldMode; $('#edgemode').value = state.edgeMode;
-$('#edgemode').addEventListener('change', (e) => { state.edgeMode = e.target.value; restyle(); });
+$('#layoutmode').addEventListener('change', (e) => { state.layout = e.target.value; rebuild(true); });
+$('#edgemode').addEventListener('change', (e) => { state.edgeMode = e.target.value; rebuild(true); });
 
 /* ---------- header / pages ---------- */
 document.title = MODEL.title + ' — ERD viewer';
 $('#title').textContent = MODEL.title;
 const chips = [`${ents.length} entities`, `${rels.length} relationships`];
 for (const k of ['Version', 'Last updated', 'Target database', 'Status']) if (MODEL.meta[k]) chips.push(`${k}: ${MODEL.meta[k]}`);
+if (MODEL.groupsDerived) chips.push('groups inferred');
 $('#chips').innerHTML = chips.map((c) => `<span class="chip">${esc(c)}</span>`).join('');
 const tabs = [['diagram', 'Diagram'], ['questions', `Open questions (${MODEL.questions.length})`], ['assumptions', `Assumptions (${MODEL.assumptions.length})`], ['notes', `Summary & warnings (${MODEL.warnings.length})`]];
 $('#tabs').innerHTML = tabs.map(([id, t]) => `<button class="tab" role="tab" data-tab="${id}" aria-selected="${id === 'diagram'}">${esc(t)}</button>`).join('');
@@ -133,7 +146,7 @@ function tableHtml(rows, empty) {
 }
 $('#page-questions').innerHTML = `<h2>Open questions</h2>${tableHtml(MODEL.questions, 'None recorded.')}`;
 $('#page-assumptions').innerHTML = `<h2>Assumptions</h2>${tableHtml(MODEL.assumptions, 'None recorded.')}`;
-$('#page-notes').innerHTML = `<h2>Summary</h2><p>${esc(MODEL.summary) || '<span class="empty">None.</span>'}</p>` +
+$('#page-notes').innerHTML = (MODEL.groupsDerived ? '<p class="notice"><strong>Groups inferred.</strong> This ERD has no <code>## Groups</code> section, so the viewer grouped tables from their relationships. Add <code>## Groups</code> and a <code>Group</code> bullet per entity to ERD.md to control the grouping.</p>' : '') + `<h2>Summary</h2><p>${esc(MODEL.summary) || '<span class="empty">None.</span>'}</p>` +
   `<h2>Parser warnings</h2>${MODEL.warnings.length ? `<ul class="warnlist">${MODEL.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : '<p class="empty">None.</p>'}` +
   (MODEL.changeLog.length ? `<h2>Change log</h2>${tableHtml(MODEL.changeLog, '')}` : '') +
   (MODEL.deferred ? `<h2>Out of scope / deferred</h2><pre style="white-space:pre-wrap;font:inherit">${esc(MODEL.deferred)}</pre>` : '');
@@ -148,6 +161,8 @@ $('#tabs').addEventListener('click', (e) => { const b = e.target.closest('.tab')
 
 /* ---------- filters UI ---------- */
 $('#kinds').innerHTML = allKinds.map((k) => `<label class="row"><input type="checkbox" data-kind="${esc(k)}" checked><span class="sw" style="background:var(${kindVar[k]})"></span>${esc(k)} <small style="color:var(--muted)">${ents.filter((e) => kindOf(e) === k).length}</small></label>`).join('');
+$('#groups').innerHTML = allGroups.map((g) => `<label class="row"><input type="checkbox" data-group="${esc(g)}" checked><span class="sw" style="background:var(--g${allGroups.indexOf(g) % 6});border:1px solid var(--frame)"></span>${esc(g)} <small style="color:var(--muted)">${ents.filter((e) => e.group === g).length}</small></label>`).join('');
+$('#groups').addEventListener('change', (e) => { const k = e.target.dataset.group; e.target.checked ? state.groups.add(k) : state.groups.delete(k); rebuild(true); });
 $('#sens').innerHTML = SENS.concat(['None']).map((s) => `<label class="row"><input type="checkbox" data-sens="${s}" checked>${s === 'None' ? 'None / unspecified' : s} <small style="color:var(--muted)">${ents.filter((e) => (sensOf(e).length ? sensOf(e).includes(s) : s === 'None')).length}</small></label>`).join('');
 $('#kinds').addEventListener('change', (e) => { const k = e.target.dataset.kind; e.target.checked ? state.kinds.add(k) : state.kinds.delete(k); rebuild(true); });
 $('#sens').addEventListener('change', (e) => { const k = e.target.dataset.sens; e.target.checked ? state.sens.add(k) : state.sens.delete(k); rebuild(true); });
@@ -169,10 +184,11 @@ function visibleSet() {
     const e = byId.get(id);
     if (id !== state.selected && id !== state.focus?.id) {
       if (!state.kinds.has(kindOf(e))) return false;
+      if (e.group && allGroups.includes(e.group) && !state.groups.has(e.group)) return false;
       const s = sensOf(e); if (!(s.length ? s.some((x) => state.sens.has(x)) : state.sens.has('None'))) return false;
     }
     if (!state.showDeprecated && e.deprecated && id !== state.selected) return false;
-    if (!state.showIsolated && !state.focus && nbrs.get(id).size === 0) return false;
+    if (!state.showIsolated && !state.focus && !e.isLookup && dnbrs.get(id).size === 0) return false;
     return true;
   }));
 }
@@ -182,6 +198,7 @@ const mctx = document.createElement('canvas').getContext('2d');
 const F_TITLE = '600 12px system-ui,sans-serif', F_MONO = '11px ui-monospace,Menlo,Consolas,monospace';
 const measure = (t, f) => { mctx.font = f; return mctx.measureText(t).width; };
 const ROW = 16, HEAD = 34, MAXROWS = 30;
+const typeText = (f) => (f.lookupType ? '→ ' + f.lookupType : f.type);
 function fieldRows(e) {
   const f = e.fields;
   if (state.fieldMode === 'none') return { rows: [], more: 0 };
@@ -202,100 +219,21 @@ function nameLines(e) {
   lines.push(cur); return lines;
 }
 const F_NAME = '700 14px system-ui,sans-serif', LINE = 18;
+const lkCount = (e) => e.fields.filter((f) => f.lookupType).length;
+const sensW = (sn) => 12 + sn.join('/').length * 6.2;
 function sizeNode(e) {
   if (state.fieldMode === 'none') {
-    const lines = nameLines(e), sn = sensOf(e);
+    const lines = nameLines(e), sn = sensOf(e), lk = lkCount(e);
+    const badges = (sn.length ? sensW(sn) : 0) + (lk ? (sn.length ? 4 : 0) + 34 : 0) + 24;
     const w = Math.ceil(Math.max(...lines.map((l) => measure(l, F_NAME))) + 26 + (sn.length ? 4 : 0));
-    return { w: Math.max(w, 90), h: 14 + lines.length * LINE + (sn.length ? 16 : 0), rows: [], more: 0, lines };
+    return { w: Math.max(w, 90, Math.ceil(badges)), h: 14 + lines.length * LINE + (sn.length || lk ? 16 : 0), rows: [], more: 0, lines };
   }
   const { rows, more } = fieldRows(e);
   const sn = sensOf(e);
   let w = measure(e.table, F_TITLE) + 28 + (sn.length ? 16 + sn.join('/').length * 6 : 0);
-  for (const r of rows) w = Math.max(w, measure(r.column, F_MONO) + measure(r.type, F_MONO) + 78);
+  for (const r of rows) w = Math.max(w, measure(r.column, F_MONO) + measure(typeText(r), F_MONO) + 78);
   w = Math.min(Math.max(Math.ceil(w), 190), 420);
   return { w, h: HEAD + (rows.length + (more > 0 ? 1 : 0)) * ROW + 8, rows, more };
-}
-
-/* ---------- layout: layered per component, shelf-packed ---------- */
-function layout(nodes, edges) {
-  // nodes: [{id,w,h}], edges: [{from(child),to(parent)}]
-  const idx = new Map(nodes.map((n, i) => [n.id, n]));
-  const adj = new Map(nodes.map((n) => [n.id, new Set()]));
-  const parents = new Map(nodes.map((n) => [n.id, new Set()])), children = new Map(nodes.map((n) => [n.id, new Set()]));
-  for (const e of edges) { if (e.from === e.to || !idx.has(e.from) || !idx.has(e.to)) continue; adj.get(e.from).add(e.to); adj.get(e.to).add(e.from); parents.get(e.from).add(e.to); children.get(e.to).add(e.from); }
-  const seen = new Set(), comps = [];
-  for (const n of nodes) {
-    if (seen.has(n.id)) continue;
-    const comp = [], st = [n.id]; seen.add(n.id);
-    while (st.length) { const v = st.pop(); comp.push(v); adj.get(v).forEach((u) => { if (!seen.has(u)) { seen.add(u); st.push(u); } }); }
-    comps.push(comp);
-  }
-  const placed = [];
-  for (const comp of comps) placed.push(layoutComponent(comp, idx, parents, children));
-  // shelf pack
-  placed.sort((a, b) => b.w * b.h - a.w * a.h);
-  const GAP = state.fieldMode === 'none' ? 40 : 80, totalArea = placed.reduce((s, c) => s + (c.w + GAP) * (c.h + GAP), 0);
-  const target = Math.max(placed.reduce((m, c) => Math.max(m, c.w), 0), Math.sqrt(totalArea * 1.7));
-  let x = 0, y = 0, rowH = 0;
-  for (const c of placed) {
-    if (x > 0 && x + c.w > target) { x = 0; y += rowH + GAP; rowH = 0; }
-    for (const n of c.nodes) { n.x += x; n.y += y; }
-    x += c.w + GAP; rowH = Math.max(rowH, c.h);
-  }
-  return nodes;
-}
-function layoutComponent(ids, idx, parents, children) {
-  const set = new Set(ids), layer = new Map();
-  // longest-path layering with cycle breaking (DFS; back edges ignored)
-  const state_ = new Map(), order = [];
-  const dfs = (v) => { state_.set(v, 1); for (const c of children.get(v)) { if (!set.has(c)) continue; const s = state_.get(c); if (s === 1) continue; if (!s) dfs(c); } state_.set(v, 2); order.push(v); };
-  ids.filter((v) => !parents.get(v).size).concat(ids).forEach((v) => { if (!state_.get(v)) dfs(v); });
-  const topo = order.reverse(), pos = new Map(topo.map((v, i) => [v, i]));
-  for (const v of topo) {
-    let l = 0;
-    for (const p of parents.get(v)) if (set.has(p) && pos.get(p) < pos.get(v)) l = Math.max(l, (layer.get(p) ?? 0) + 1);
-    layer.set(v, l);
-  }
-  // pull pure roots down next to their lowest child so reference tables sit above their consumer
-  for (const v of topo) if (![...parents.get(v)].some((p) => set.has(p) && pos.get(p) < pos.get(v))) {
-    const cs = [...children.get(v)].filter((c) => set.has(c) && pos.get(c) > pos.get(v));
-    if (cs.length) layer.set(v, Math.min(...cs.map((c) => layer.get(c))) - 1);
-  }
-  const minL = Math.min(...layer.values()); layer.forEach((l, v) => layer.set(v, l - minL));
-  const L = []; ids.forEach((v) => (L[layer.get(v)] ??= []).push(v));
-  for (let i = 0; i < L.length; i++) L[i] ??= [];
-  // order: barycenter sweeps
-  const frac = new Map();
-  const setFrac = () => L.forEach((row) => row.forEach((v, i) => frac.set(v, (i + 0.5) / row.length)));
-  setFrac();
-  const nb = (v) => [...parents.get(v), ...children.get(v)].filter((u) => set.has(u));
-  for (let it = 0; it < 8; it++) {
-    const down = it % 2 === 0;
-    const rows = down ? L.map((_, i) => i) : L.map((_, i) => L.length - 1 - i);
-    for (const i of rows) {
-      const key = new Map();
-      for (const v of L[i]) {
-        const ref = nb(v).filter((u) => (down ? layer.get(u) < i : layer.get(u) > i));
-        key.set(v, ref.length ? ref.reduce((s, u) => s + frac.get(u), 0) / ref.length : frac.get(v));
-      }
-      L[i].sort((a, b) => key.get(a) - key.get(b));
-      L[i].forEach((v, j) => frac.set(v, (j + 0.5) / L[i].length));
-    }
-  }
-  // coordinates: wrap wide layers into sub-rows
-  const compact = state.fieldMode === 'none', XGAP = compact ? 22 : 36, YGAP = compact ? 36 : 70, BUDGET = 2600, out = [];
-  let y = 0, maxW = 0; const rowsOut = [];
-  for (const row of L) {
-    const subs = []; let cur = [], w = 0;
-    for (const v of row) { const n = idx.get(v); if (cur.length && w + n.w + XGAP > BUDGET) { subs.push(cur); cur = []; w = 0; } cur.push(n); w += n.w + XGAP; }
-    if (cur.length) subs.push(cur);
-    for (const s of subs) {
-      const w2 = s.reduce((t, n) => t + n.w, 0) + XGAP * (s.length - 1), h = Math.max(...s.map((n) => n.h));
-      rowsOut.push({ s, w: w2, y, h }); y += h + YGAP; maxW = Math.max(maxW, w2);
-    }
-  }
-  for (const r of rowsOut) { let x = (maxW - r.w) / 2; for (const n of r.s) { n.x = x; n.y = r.y; x += n.w + XGAP; out.push(n); } }
-  return { nodes: out, w: maxW, h: Math.max(0, y - YGAP) };
 }
 
 /* ---------- rendering ---------- */
@@ -304,38 +242,20 @@ let scene = null; // {nodes:Map, edgeEls, nodeEls, bounds}
 function rebuild(refit) {
   const vis = visibleSet();
   if (state.selected && !vis.has(state.selected)) state.selected = null;
-  const nodes = ents.filter((e) => vis.has(e.id)).map((e) => ({ id: e.id, e, ...sizeNode(e), x: 0, y: 0 }));
-  const edges = rels.filter((r) => vis.has(r.from) && vis.has(r.to));
-  layout(nodes, edges);
+  const nodes = ents.filter((e) => vis.has(e.id)).map((e) => ({ id: e.id, e, kind: kindOf(e), group: e.group, ...sizeNode(e), x: 0, y: 0 }));
+  const edges = drawnRels.filter((r) => vis.has(r.from) && vis.has(r.to));
+  // A small focus view reads better without group frames, so it uses the compact layout.
+  const mode = state.layout === 'compact' || (state.focus && nodes.length <= 6) ? 'compact' : 'grouped';
+  const hidden = state.edgeMode === 'selected'; // lines show only for the selection, so the gutters can stay tight
+  const vr = svg.getBoundingClientRect(), view = { w: Math.max(400, vr.width - 80), h: Math.max(300, vr.height - 80) };
+  const out = layoutBest(nodes, edges, MODEL.groups, { mode, lazy: hidden, maxLanes: 6, laneMin: 3.5, base: hidden ? 12 : 24, maxCols: state.fieldMode === 'none' ? 10 : 6 }, view);
   const nmap = new Map(nodes.map((n) => [n.id, n]));
-  draw(nodes, edges, nmap);
-  $('#status').textContent = `${nodes.length} of ${ents.length} entities · ${edges.length} of ${rels.length} relationships` + (state.focus ? ` · focus: ${byId.get(state.focus.id).table} (${state.focus.hops} hop${state.focus.hops > 1 ? 's' : ''})` : '');
+  out.lazy = hidden;
+  draw(nodes, edges, nmap, out);
+  const lk = rels.length - drawnRels.length;
+  $('#status').textContent = `${nodes.length} of ${ents.length} entities · ${edges.length} of ${drawnRels.length} relationships` + (lk ? ` · ${lk} lookup references marked in tables` : '') + (state.focus ? ` · focus: ${byId.get(state.focus.id).table} (${state.focus.hops} hop${state.focus.hops > 1 ? 's' : ''})` : '');
   if (refit) fit(); else applyTransform();
   restyle(); renderMini(); renderDetail();
-}
-
-function ports(edges, nmap) {
-  // assign each edge end to top/bottom/side of node; spread along the side
-  const slots = new Map(); // key nodeId|side -> [{edge,end,other}]
-  const add = (id, side, o) => { const k = id + '|' + side; (slots.get(k) ?? slots.set(k, []).get(k)).push(o); };
-  for (const e of edges) {
-    const c = nmap.get(e.from), p = nmap.get(e.to);
-    e._self = c === p;
-    if (e._self) { add(c.id, 'R', { e, end: 'c', ox: c.x }); add(c.id, 'R', { e, end: 'p', ox: c.x }); continue; }
-    if (c.y > p.y + p.h) { add(c.id, 'T', { e, end: 'c', ox: p.x + p.w / 2 }); add(p.id, 'B', { e, end: 'p', ox: c.x + c.w / 2 }); e._mode = 'v'; }
-    else if (p.y > c.y + c.h) { add(c.id, 'B', { e, end: 'c', ox: p.x + p.w / 2 }); add(p.id, 'T', { e, end: 'p', ox: c.x + c.w / 2 }); e._mode = 'v'; }
-    else { const cl = c.x < p.x; add(c.id, cl ? 'R' : 'L', { e, end: 'c', ox: p.y }); add(p.id, cl ? 'L' : 'R', { e, end: 'p', ox: c.y }); e._mode = 'h'; }
-  }
-  for (const [k, list] of slots) {
-    const [id, side] = k.split('|'); const n = nmap.get(id);
-    list.sort((a, b) => a.ox - b.ox);
-    list.forEach((o, i) => {
-      const t = (i + 1) / (list.length + 1);
-      const pt = side === 'T' ? { x: n.x + n.w * t, y: n.y, dx: 0, dy: -1 } : side === 'B' ? { x: n.x + n.w * t, y: n.y + n.h, dx: 0, dy: 1 }
-        : side === 'L' ? { x: n.x, y: n.y + Math.min(n.h - 6, 18 + (n.h - 24) * t), dx: -1, dy: 0 } : { x: n.x + n.w, y: n.y + Math.min(n.h - 6, 18 + (n.h - 24) * t), dx: 1, dy: 0 };
-      o.e['_' + o.end] = pt;
-    });
-  }
 }
 
 function markerPath(pt, kind, optional) {
@@ -348,36 +268,81 @@ function markerPath(pt, kind, optional) {
 }
 function circleAt(pt) { return { cx: pt.x + pt.dx * 17, cy: pt.y + pt.dy * 17 }; }
 
-function edgePath(e) {
-  const a = e._c, b = e._p;
-  if (e._self) { const r = 36; return `M${a.x},${a.y}C${a.x + r * 2},${a.y - r} ${b.x + r * 2},${b.y + r} ${b.x},${b.y}`; }
-  const dist = Math.hypot(b.x - a.x, b.y - a.y), d = Math.max(36, Math.min(220, dist * 0.45));
-  return `M${a.x},${a.y}C${a.x + a.dx * d},${a.y + a.dy * d} ${b.x + b.dx * d},${b.y + b.dy * d} ${b.x},${b.y}`;
-}
+const tintOf = (name, fallback) => { const i = allGroups.indexOf(name); return i >= 0 ? i % 6 : fallback; };
+const text = (parent, x, y, str, attrs = {}) => { const t = el('text', { x, y, 'font-family': 'system-ui,sans-serif', 'font-size': 11, fill: css('--text'), ...attrs }, parent); t.textContent = str; return t; };
 
-function draw(nodes, edges, nmap) {
-  vp.textContent = '';
-  const edgeLayer = el('g', {}, vp), nodeLayer = el('g', {}, vp);
-  ports(edges, nmap);
-  const edgeEls = [];
-  for (const e of edges) {
+function drawEdges(list, paths) {
+  const edgeLayer = scene.edgeLayer, pmap = new Map(paths.map((p) => [p.id, p])), edgeEls = [];
+  edgeLayer.textContent = '';
+  for (const e of list) {
+    const pa = pmap.get(e.id); if (!pa) continue;
+    e._c = pa.c; e._p = pa.p;
     const g = el('g', { 'data-r': e.id }, edgeLayer);
-    el('path', { d: edgePath(e), fill: 'none', stroke: 'transparent', 'stroke-width': 10 }, g).style.cursor = 'pointer';
-    const line = el('path', { d: edgePath(e), fill: 'none', stroke: css('--edge'), 'stroke-width': 1.3 }, g);
+    el('path', { d: pa.d, fill: 'none', stroke: 'transparent', 'stroke-width': 10 }, g).style.cursor = 'pointer';
+    const line = el('path', { d: pa.d, fill: 'none', stroke: css('--edge'), 'stroke-width': 1.3, 'stroke-linejoin': 'miter' }, g);
     if (e.cardinality === 'many-to-many' || e.deprecated) line.setAttribute('stroke-dasharray', '5 3');
     const cMany = e.cardinality !== 'one-to-one';
     const m = el('path', { d: markerPath(e._c, cMany ? 'many' : 'one') + markerPath(e._p, 'one'), fill: 'none', stroke: css('--edge'), 'stroke-width': 1.3 }, g);
     const child = byId.get(e.from), fkf = child.fields.find((f) => f.field === e.fk || f.column === e.fk);
     if (fkf && !fkf.req) { const c = circleAt(e._p); el('circle', { cx: c.cx, cy: c.cy, r: 3, fill: css('--bg'), stroke: css('--edge'), 'stroke-width': 1.2 }, g); }
-    const mid = { x: (e._c.x + e._p.x) / 2, y: (e._c.y + e._p.y) / 2 };
-    const lbl = el('text', { x: mid.x, y: mid.y - 4, 'text-anchor': 'middle', 'font-size': 11, fill: css('--text'), 'paint-order': 'stroke', stroke: css('--bg'), 'stroke-width': 4, display: 'none', 'font-family': 'system-ui,sans-serif' }, g);
+    const lbl = el('text', { x: pa.label.x, y: pa.label.y - 4, 'text-anchor': 'middle', 'font-size': 11, fill: css('--text'), 'paint-order': 'stroke', stroke: css('--bg'), 'stroke-width': 4, display: 'none', 'font-family': 'system-ui,sans-serif' }, g);
     lbl.textContent = e.label || e.description || e.fk || '';
     const t = el('title', {}, g); t.textContent = `${e.id}: ${byId.get(e.from).table} → ${byId.get(e.to).table} (${e.cardinality})${e.description ? '\n' + e.description : ''}`;
     edgeEls.push({ e, g, line, m, lbl });
   }
+  scene.edgeEls = edgeEls;
+}
+// With connectors hidden until selection, route only the edges of the selected / matched tables.
+function syncEdges() {
+  if (!scene.lazy) return;
+  const sel = state.selected, hasMatch = state.matches.size > 0;
+  const ids = scene.edges.filter((e) => (sel && (e.from === sel || e.to === sel)) || (hasMatch && (state.matches.has(e.from) || state.matches.has(e.to)))).map((e) => e.id);
+  const key = ids.join(',');
+  if (key === scene.drawnKey) return;
+  scene.drawnKey = key;
+  const set = new Set(ids);
+  drawEdges(scene.edges.filter((e) => set.has(e.id)), ids.length ? scene.out.reroute(set) : []);
+}
+
+function drawLegend(parent, L) {
+  const g = el('g', { transform: `translate(${L.x},${L.y})` }, parent), edge = css('--edge');
+  el('rect', { width: L.w, height: L.h, rx: 8, fill: css('--panel'), stroke: css('--frame'), 'stroke-width': 1 }, g);
+  text(g, 12, 18, 'Legend', { 'font-weight': 700, fill: css('--muted') });
+  ['Core', 'Reference', 'Junction', 'History/Audit', 'Lookup'].forEach((k, i) => { el('rect', { x: 12, y: 29 + i * 17, width: 10, height: 10, rx: 2, fill: css(kindVar[k]) }, g); text(g, 28, 38 + i * 17, k); });
+  const row = (y, label, many, opt) => {
+    el('path', { d: `M176,${y}L236,${y}` + markerPath({ x: 176, y, dx: 1, dy: 0 }, many ? 'many' : 'one'), fill: 'none', stroke: edge, 'stroke-width': 1.3 }, g);
+    if (opt) { const c = circleAt({ x: 236, y, dx: -1, dy: 0 }); el('circle', { cx: c.cx, cy: c.cy, r: 3, fill: css('--bg'), stroke: edge, 'stroke-width': 1.2 }, g); }
+    text(g, 246, y + 4, label);
+  };
+  row(38, 'many: the FK side (child)', true); row(58, 'one: the parent side', false); row(78, 'optional FK (circle at parent)', false, true);
+  el('path', { d: 'M176,98L236,98', fill: 'none', stroke: edge, 'stroke-width': 1.3, 'stroke-dasharray': '5 3' }, g); text(g, 246, 102, 'many-to-many / deprecated');
+  const X = 470;
+  el('rect', { x: X, y: 28, width: 20, height: 13, rx: 3, fill: css('--k-lookup') }, g); text(g, X + 10, 38, 'LK', { 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 700, fill: '#fff' });
+  text(g, X + 28, 38, 'field uses the shared lookup'); text(g, X, 56, 'No line is drawn to the lookup table.', { fill: css('--muted'), 'font-size': 10.5 });
+  el('rect', { x: X, y: 68, width: 26, height: 14, rx: 4, fill: css('--warn') }, g); text(g, X + 13, 78.5, 'PII', { 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 700, fill: '#fff' }); text(g, X + 34, 79, 'sensitive data');
+  text(g, X, 100, 'Elbow connectors; a hop marks a crossing.', { fill: css('--muted'), 'font-size': 10.5 });
+}
+
+function draw(nodes, edges, nmap, out) {
+  vp.textContent = '';
+  const frameLayer = el('g', {}, vp), edgeLayer = el('g', {}, vp), nodeLayer = el('g', {}, vp), headLayer = el('g', {}, vp); // headers sit above the connectors so a stub never strikes through a group name
+  out.frames.forEach((f) => {
+    const g = el('g', { 'data-frame': f.name }, frameLayer), grp = MODEL.groups.find((x) => x.name === f.name);
+    el('rect', { x: f.x, y: f.y, width: f.w, height: f.h, rx: 10, fill: css('--g' + tintOf(f.name, f.tint)), stroke: css('--frame'), 'stroke-width': 1.2 }, g);
+    const lab = text(headLayer, f.x + 12, f.y + 17, f.name, { 'font-size': 12.5, 'font-weight': 700, fill: css('--muted'), 'paint-order': 'stroke', stroke: css('--bg'), 'stroke-width': 4 });
+    if (grp?.description) { const t = el('title', {}, lab); t.textContent = grp.description; }
+  });
+  if (out.lookup) {
+    const f = out.lookup, g = el('g', {}, frameLayer);
+    el('rect', { x: f.x, y: f.y, width: f.w, height: f.h, rx: 10, fill: 'none', stroke: css('--k-lookup'), 'stroke-width': 1.4, 'stroke-dasharray': '6 4' }, g);
+    text(g, f.x + 12, f.y + 17, f.name, { 'font-size': 12.5, 'font-weight': 700, fill: css('--muted') });
+  }
+  drawLegend(frameLayer, out.legend);
+  scene = { nodes, nmap, edgeEls: [], nodeEls: new Map(), frames: out.frames, bounds: out.bounds, out, edges, edgeLayer, lazy: !!out.lazy, drawnKey: null };
+  drawEdges(out.lazy ? [] : edges, out.paths);
   const nodeEls = new Map();
   for (const n of nodes) {
-    const e = n.e, kc = css(kindVar[kindOf(e)]);
+    const e = n.e, kc = css(kindVar[kindOf(e)]), lk = lkCount(e);
     const g = el('g', { transform: `translate(${n.x},${n.y})`, 'data-id': e.id }, nodeLayer); g.style.cursor = 'pointer';
     const box = el('rect', { width: n.w, height: n.h, rx: 7, fill: css('--node'), stroke: css('--node-border'), 'stroke-width': 1.2 }, g);
     if (e.deprecated) box.setAttribute('stroke-dasharray', '5 3');
@@ -385,10 +350,11 @@ function draw(nodes, edges, nmap) {
       el('rect', { width: n.w, height: n.h, rx: 7, fill: kc, opacity: 0.14 }, g);
       el('rect', { width: 5, height: n.h, rx: 2, fill: kc }, g);
       n.lines.forEach((l, i) => { const t = el('text', { x: 14, y: 20 + i * LINE, 'font-size': 14, 'font-weight': 700, fill: css('--text'), 'font-family': 'system-ui,sans-serif' }, g); t.textContent = l; });
-      const sn = sensOf(e);
-      if (sn.length) { const bw = 12 + sn.join('/').length * 6.2; el('rect', { x: 12, y: n.h - 19, width: bw, height: 14, rx: 4, fill: css('--warn') }, g); const t = el('text', { x: 12 + bw / 2, y: n.h - 8.5, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 700, fill: '#fff', 'font-family': 'system-ui,sans-serif' }, g); t.textContent = sn.join('/'); }
+      const sn = sensOf(e); let bx = 12;
+      if (sn.length) { const bw = sensW(sn); el('rect', { x: bx, y: n.h - 19, width: bw, height: 14, rx: 4, fill: css('--warn') }, g); const t = el('text', { x: bx + bw / 2, y: n.h - 8.5, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 700, fill: '#fff', 'font-family': 'system-ui,sans-serif' }, g); t.textContent = sn.join('/'); bx += bw + 4; }
+      if (lk) { el('rect', { x: bx, y: n.h - 19, width: 34, height: 14, rx: 4, fill: css('--k-lookup') }, g); const t = el('text', { x: bx + 17, y: n.h - 8.5, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 700, fill: '#fff', 'font-family': 'system-ui,sans-serif' }, g); t.textContent = `LK ×${lk}`; }
     } else {
-    el('path', { d: `M0,7a7,7 0 0 1 7,-7h${n.w - 14}a7,7 0 0 1 7,7v${HEAD - 7}h-${n.w}z`, fill: kc, opacity: 0.16 }, g);
+      el('path', { d: `M0,7a7,7 0 0 1 7,-7h${n.w - 14}a7,7 0 0 1 7,7v${HEAD - 7}h-${n.w}z`, fill: kc, opacity: 0.16 }, g);
       el('rect', { width: 4, height: HEAD, fill: kc, rx: 2 }, g);
       const title = el('text', { x: 12, y: 15, 'font-size': 12, 'font-weight': 600, fill: css('--text'), 'font-family': 'system-ui,sans-serif' }, g); title.textContent = e.table;
       const sub = el('text', { x: 12, y: 28, 'font-size': 9.5, fill: css('--muted'), 'font-family': 'system-ui,sans-serif' }, g);
@@ -399,15 +365,16 @@ function draw(nodes, edges, nmap) {
     const fg = el('g', { class: 'fields' }, g);
     n.rows.forEach((f, i) => {
       const y = HEAD + 12 + i * ROW;
-      if (f.key) { const kt = el('text', { x: 10, y, 'font-size': 9.5, 'font-weight': 700, fill: /PK/.test(f.key) ? css('--hl') : css('--accent'), 'font-family': 'ui-monospace,Menlo,monospace' }, fg); kt.textContent = f.key.startsWith('FK') ? 'FK' : f.key.split(',')[0]; }
+      if (f.lookupType) { el('rect', { x: 7, y: y - 10, width: 20, height: 13, rx: 3, fill: css('--k-lookup') }, fg); const kt = el('text', { x: 17, y: y - 0.5, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 700, fill: '#fff', 'font-family': 'ui-monospace,Menlo,monospace' }, fg); kt.textContent = 'LK'; }
+      else if (f.key) { const kt = el('text', { x: 10, y, 'font-size': 9.5, 'font-weight': 700, fill: /PK/.test(f.key) ? css('--hl') : css('--accent'), 'font-family': 'ui-monospace,Menlo,monospace' }, fg); kt.textContent = f.key.startsWith('FK') ? 'FK' : f.key.split(',')[0]; }
       const c = el('text', { x: 34, y, 'font-size': 11, fill: css('--text'), 'font-family': 'ui-monospace,Menlo,Consolas,monospace', 'font-weight': f.req ? 600 : 400 }, fg); c.textContent = f.column;
-      const t = el('text', { x: n.w - 10, y, 'font-size': 10.5, 'text-anchor': 'end', fill: css('--muted'), 'font-family': 'ui-monospace,Menlo,Consolas,monospace' }, fg); t.textContent = f.type;
+      const t = el('text', { x: n.w - 10, y, 'font-size': 10.5, 'text-anchor': 'end', fill: f.lookupType ? css('--k-lookup') : css('--muted'), 'font-family': 'ui-monospace,Menlo,Consolas,monospace' }, fg); t.textContent = typeText(f);
     });
     if (n.more > 0) { const t = el('text', { x: 12, y: HEAD + 12 + n.rows.length * ROW, 'font-size': 10.5, 'font-style': 'italic', fill: css('--muted'), 'font-family': 'system-ui,sans-serif' }, fg); t.textContent = `+ ${n.more} more field${n.more > 1 ? 's' : ''}`; }
     const tt = el('title', {}, g); tt.textContent = `${e.table}\n${e.purpose || ''}`;
     nodeEls.set(e.id, { n, g, box });
   }
-  scene = { nodes, nmap, edgeEls, nodeEls, bounds: bounds(nodes) };
+  scene.nodeEls = nodeEls;
   lodClass = null; updateLOD();
 }
 function bounds(nodes) {
@@ -420,6 +387,7 @@ function bounds(nodes) {
 /* ---------- highlight / dim ---------- */
 function restyle() {
   if (!scene) return;
+  syncEdges();
   const sel = state.selected, hasMatch = state.matches.size > 0;
   const near = sel ? new Set([sel, ...nbrs.get(sel)]) : null;
   for (const [id, o] of scene.nodeEls) {
@@ -489,6 +457,7 @@ function renderMini() {
   mini.textContent = ''; if (!scene || !scene.nodes.length) return;
   const b = scene.bounds, W = 200, H = 140, s = Math.min((W - 8) / b.w, (H - 8) / b.h);
   scene.mm = { s, ox: (W - b.w * s) / 2 - b.x * s, oy: (H - b.h * s) / 2 - b.y * s };
+  for (const f of scene.frames) el('rect', { x: f.x * s + scene.mm.ox, y: f.y * s + scene.mm.oy, width: Math.max(1.5, f.w * s), height: Math.max(1.5, f.h * s), fill: css('--g' + tintOf(f.name, f.tint)), stroke: css('--frame'), 'stroke-width': 0.5 }, mini);
   for (const n of scene.nodes) el('rect', { x: n.x * s + scene.mm.ox, y: n.y * s + scene.mm.oy, width: Math.max(1.5, n.w * s), height: Math.max(1.5, n.h * s), fill: css(kindVar[kindOf(n.e)]), opacity: 0.7 }, mini);
   el('rect', { id: 'mv', fill: 'none', stroke: css('--accent'), 'stroke-width': 1.5 }, mini);
   renderMiniView();
@@ -517,21 +486,30 @@ function renderDetail() {
   const e = byId.get(id), sens = sensOf(e);
   const rl = relsOf.get(id).map((r) => {
     const out = r.from === id, o = byId.get(out ? r.to : r.from);
-    return `<tr><td class="mono">${esc(r.id)}</td><td>${r.cardinality === 'one-to-one' ? '1:1' : r.cardinality === 'many-to-many' ? 'M:N' : out ? 'N:1 →' : '← 1:N'}</td><td><span class="link" data-go="${o.id}">${esc(o.table)}</span></td><td class="mono">${esc(r.fk)}</td></tr>${r.description ? `<tr><td></td><td colspan="3" style="color:var(--muted)">${esc(r.description)}</td></tr>` : ''}`;
+    return `<tr><td class="mono">${esc(r.id)}</td><td>${r.cardinality === 'one-to-one' ? '1:1' : r.cardinality === 'many-to-many' ? 'M:N' : out ? 'N:1 →' : '← 1:N'}${r.lookup ? ' <span class="lk">LK</span>' : ''}</td><td><span class="link" data-go="${o.id}">${esc(o.table)}</span></td><td class="mono">${esc(r.fk)}</td></tr>${r.description ? `<tr><td></td><td colspan="3" style="color:var(--muted)">${esc(r.description)}</td></tr>` : ''}`;
   }).join('');
   d.innerHTML = `<h2>${esc(e.name)}</h2><div class="sub mono">${esc(e.table)} · ${esc(e.id)}</div>
   ${sens.map((s) => `<span class="badge ${s}">${s}</span>`).join(' ')}
   ${e.deprecated ? `<p><span class="badge" style="background:var(--warn);color:#fff">DEPRECATED</span> ${esc(e.deprecated.replace(/^deprecated\s*/i, ''))}</p>` : ''}
   <p>${esc(e.purpose)}</p>
   <dl><dt>Kind</dt><dd>${esc(e.kind || '—')}</dd><dt>Volume</dt><dd>${esc(e.volume || '—')}</dd><dt>Sensitivity</dt><dd>${esc(e.sensitivity || '—')}</dd><dt>Sources</dt><dd>${esc(e.sources || '—')}</dd></dl>
+  ${lookupPanel(e)}
   <h3>Relationships (${relsOf.get(id).length})</h3>${rl ? `<table class="rt">${rl}</table>` : '<p class="empty">None.</p>'}
   <h3>Fields (${e.fields.length})</h3>
   <table><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Description</th></tr></thead><tbody>${e.fields.map((f) => `<tr><td class="mono">${esc(f.column)}${f.req ? ' *' : ''}</td><td class="mono">${esc(f.type)}</td><td class="mono">${esc(f.key)}</td><td>${esc(f.description)}${f.sources ? `<div style="color:var(--muted)">${esc(f.sources)}</div>` : ''}</td></tr>`).join('')}</tbody></table>
   <p style="color:var(--muted)">* required</p>`;
 }
+function lookupPanel(e) {
+  if (e.isLookup) {
+    const users = ents.map((x) => ({ x, types: [...new Set(x.fields.filter((f) => f.lookupType).map((f) => f.lookupType))] })).filter((u) => u.types.length);
+    return `<h3>Referenced by (${users.length} tables)</h3>${users.length ? `<table class="rt">${users.map((u) => `<tr><td colspan="2"><span class="link" data-go="${u.x.id}">${esc(u.x.table)}</span></td><td colspan="2" class="mono">${esc(u.types.join(', '))}</td></tr>`).join('')}</table>` : '<p class="empty">No table references it.</p>'}<p style="color:var(--muted)">No lines are drawn to the lookup table. Selecting it highlights the tables that use it.</p>`;
+  }
+  const lf = e.fields.filter((f) => f.lookupType);
+  return lf.length ? `<h3>Lookup fields (${lf.length})</h3><table class="rt">${lf.map((f) => `<tr><td colspan="2" class="mono">${esc(f.column)}</td><td colspan="2" class="mono"><span class="lk">LK</span> ${esc(f.lookupType)}</td></tr>`).join('')}</table>` : '';
+}
 $('#detail').addEventListener('click', (e) => { const g = e.target.closest('[data-go]'); if (g) goTo(g.dataset.go); });
 function goTo(id) {
-  if (!scene.nodeEls.has(id)) { state.focus = null; state.kinds = new Set(allKinds); state.sens = new Set(SENS.concat(['None'])); document.querySelectorAll('#kinds input,#sens input').forEach((c) => (c.checked = true)); state.selected = id; rebuild(true); }
+  if (!scene.nodeEls.has(id)) { state.focus = null; state.kinds = new Set(allKinds); state.groups = new Set(allGroups); state.sens = new Set(SENS.concat(['None'])); document.querySelectorAll('#kinds input,#groups input,#sens input').forEach((c) => (c.checked = true)); state.selected = id; rebuild(true); }
   select(id);
   const o = scene.nodeEls.get(id); if (o) fit([o.n, ...[...nbrs.get(id)].map((i) => scene.nodeEls.get(i)?.n).filter(Boolean)]);
 }
@@ -541,7 +519,7 @@ const q = $('#q'), results = $('#results'); let hits = [], hi = 0;
 function search() {
   const t = q.value.trim().toLowerCase(); hits = [];
   if (t) for (const e of ents) {
-    const cols = e.fields.filter((f) => f.column.toLowerCase().includes(t) || (f.field || '').toLowerCase().includes(t));
+    const cols = e.fields.filter((f) => f.column.toLowerCase().includes(t) || (f.field || '').toLowerCase().includes(t) || (f.lookupType || '').toLowerCase().includes(t));
     const nameHit = e.table.toLowerCase().includes(t) || e.name.toLowerCase().includes(t) || e.id.toLowerCase() === t;
     if (nameHit || cols.length) hits.push({ e, cols, nameHit });
   }
@@ -567,9 +545,8 @@ document.addEventListener('keydown', (e) => {
 function serialize() {
   const b = scene.bounds, pad = 30, clone = svg.cloneNode(true);
   clone.querySelector('#vp').setAttribute('transform', `translate(${pad - b.x},${pad - b.y})`);
-  clone.querySelectorAll('[display=none]').forEach((n) => n.removeAttribute('display'));
+  // Export what is on screen, except that field rows hidden by zoom level come back (an export has no zoom).
   clone.querySelectorAll('.fields').forEach((n) => n.removeAttribute('display'));
-  clone.querySelectorAll('text[display]').forEach((n) => n.setAttribute('display', 'none'));
   const w = Math.ceil(b.w + pad * 2), h = Math.ceil(b.h + pad * 2);
   clone.setAttribute('xmlns', NS); clone.setAttribute('width', w); clone.setAttribute('height', h); clone.setAttribute('viewBox', `0 0 ${w} ${h}`);
   clone.style.background = css('--bg');
@@ -595,7 +572,7 @@ $('#expng').onclick = () => {
 };
 
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => rebuild(false));
-window.__erd = { state, rebuild, goTo, select, get scene() { return scene; } };
+window.__erd = { state, rebuild, goTo, select, fit, get scene() { return scene; }, MODEL };
 showTab('diagram');
 rebuild(true);
 })();
