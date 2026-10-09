@@ -15,25 +15,48 @@ reference**: record their repo-relative paths in the manifest and don't copy the
 already under git. Glossary or domain files (`CONTEXT.md`, `glossary.md`, `domain*.md`) go first,
 since they define the vocabulary the ERD should use.
 
-## 2. Teams meeting transcripts (primary path)
+## 2. Meeting transcripts (SharePoint files)
 
-Transcripts are reached through the meeting's **calendar event**, not as files:
+Transcripts are **files in SharePoint/OneDrive**, not calendar events. The expected team practice:
+after a Teams meeting, download its transcript (Teams/Stream → Transcript → Download `.docx`, or
+`.vtt`) and save it to the configured transcript folder. Teams doesn't store a standalone transcript
+file next to the recording. Connector tools used: `sharepoint_search`, `sharepoint_folder_search`,
+`read_resource`.
 
-1. `outlook_calendar_search` with `query` = each entry in `sharepoint.meeting_series` (or the
-   user's filter argument), `afterDateTime` / `beforeDateTime` from the run scope, and
-   `order: "newest"`. Page with `offset` until it's exhausted or you hit the scope limit.
-2. `read_resource` each event's URI. Take the `meetingTranscriptUrl` field **verbatim**.
-3. `read_resource` that `meeting-transcript:///events/...` URI. For a **recurring series**,
-   append `?start=<iso>&end=<iso>` for that occurrence's window. Otherwise the connector returns
-   only the most recent transcripts of the series.
-4. If an event has no `meetingTranscriptUrl`, transcription wasn't on. Note it in the manifest as
-   "no transcript" and move on.
+If both `sharepoint.transcript_folders` and `sharepoint.transcript_queries` are empty, skip remote
+transcript discovery with a one-line notice. `local_inputs` still works.
+If the deprecated `sharepoint.meeting_series` key is present, treat its entries as extra
+`transcript_queries` and print once per run: "`sharepoint.meeting_series` is deprecated; rename it
+to `transcript_queries`".
 
-**Fallback: transcript files in SharePoint/OneDrive.** Some teams save `.vtt`/`.docx` exports.
-Run `sharepoint_search` with a **content** query (meeting title or project name) and
-`fileType: "vtt"`, then `"docx"`. Narrow with `folderName` when the config pins
-`sharepoint.transcript_folders`. Read the hits with `read_resource` (follow its
-`startPage` footer hints until the file is complete).
+1. **Resolve folders.** For each `transcript_folders` entry, `sharepoint_folder_search(name)`. The
+   result can include **files** whose names match as well as folders. Keep only folder hits (a hit
+   whose `webUrl` has no file extension, or that `read_resource` lists as a folder). If more than one
+   folder matches, show them at Gate A with their paths and let the user pick. If none match,
+   report it.
+2. **Search.** For each `fileType` in `docx`, `vtt`, `txt`:
+   - with folders: `sharepoint_search(query = <project name or each transcript_query>, fileType, folderName = <folder>)`
+   - with no folders: `sharepoint_search(query = <each transcript_query>, fileType)`
+   - add `afterDateTime` / `beforeDateTime` from the run scope or the user's filter argument
+   - page with `offset` (`nextOffset`) until it's exhausted
+   - de-duplicate hits by URI
+
+   `folderName` is a partial match on the folder name, so it can return files from other sites or
+   libraries. Check each hit's `webUrl` against the resolved folder path and drop hits outside it.
+3. **Classify a hit as a transcript** when it's in a transcript folder, **or** its name or first page
+   has transcript shape: speaker-labelled utterances with timestamps (`0:03:12`, `00:03:12.000 -->`).
+   Anything else that matched a query is a candidate *document*, not a transcript. Handle it under §3.
+4. **Meeting date.** Parse it from the filename (`YYYY-MM-DD`, `YYYYMMDD`, `MMDDYYYY` after a
+   `_`, or Teams' default `<Meeting title>-<yyyymmdd_hhmmss>-Meeting Transcript.docx`). Otherwise use
+   `lastModifiedDateTime` and show the date as `~<date> (modified)` at Gate A.
+5. **Recordings.** Don't search for `mp4`/`m4a`. If a folder listing turns them up, list them under
+   Not included.
+6. **Read** confirmed hits with `read_resource`, following the paging footer (`startPage` hint or
+   `[pages a–b of N]`) until the file is complete.
+7. **`.vtt` hits.** The connector's plain-text list doesn't include `.vtt`. Try one read; if it
+   returns no text, list the hit under "Not included: `.vtt` not readable by the connector; export the
+   transcript as .docx or drop the .vtt in `<local_inputs>`". Local `.vtt` files are read from disk and
+   always work.
 
 ## 3. SharePoint / OneDrive documents
 
@@ -94,6 +117,13 @@ Write each remote source's extracted text to `<staging_dir>/<run-date>/S<n>-<slu
 header of title, URI, date, and attendee count (**not** names unless the user asks). For
 transcripts, keep the speaker labels and timestamps, because citations point to `@HH:MM:SS`.
 
+**Transcript normalization.** A `.docx` transcript arrives as converted text, and the connector
+flattens it: utterances run together as `<Speaker>  <H:MM:SS or M:SS>  <text>`, with no reliable line
+breaks. Split on each speaker/timestamp marker and normalize to one line per utterance,
+`[HH:MM:SS] Speaker: text` (zero-pad the timestamp). A `.vtt` normalizes the same way, using the cue
+start time. If a transcript has no timestamps, stage it as is and add `no timestamps; cite by §<speaker
+turn n>` to its header. The analyst then cites `[S<n> §turn <k>]`.
+
 **Slide decks** stage as one `## Slide <k>: <title>` section per slide (1-based), then the body
 text, tables, and the speaker notes as `**Notes:** <text>`. A slide with under ~15 words **and** a
 picture/graphic shape gets the line `[visual content not extracted]`. Citations to a slide use
@@ -108,12 +138,12 @@ the **global** IDs from the source ledger:
 | ID | Kind | Title | Date | Location | Staged file |
 |---|---|---|---|---|---|
 | S1 | context-md | Domain glossary | — | docs/context/glossary.md | (in repo) |
-| S2 | transcript | Eligibility data workshop | 2026-09-30 | meeting-transcript:///events/… | S2-eligibility-data-workshop.md |
+| S2 | transcript | Eligibility data workshop | 2026-09-30 | file:///…/Eligibility%20Data%20Workshop-20260930_140000-Meeting%20Transcript.docx | S2-eligibility-data-workshop.md |
 | S3 | sharepoint-doc | MAXIS data dictionary v4 | 2026-08-12 | file:///… | S3-maxis-data-dictionary.md |
 | S4 | slide-deck | Provider design review | 2026-10-05 | file:///…/Provider%20review.pptx | S4-provider-design-review.md |
 
 ## Not included
-- <title>: no transcript recorded / user excluded / unreadable
+- <title>: recording without a transcript file / `.vtt` not readable by the connector / user excluded / unreadable
 ```
 
 ## Source ledger
@@ -130,7 +160,7 @@ Global source registry for this ERD. IDs are permanent and never reused. Metadat
 | ID | Kind | Title | Date | Location | Fingerprint | Ingested | Staged file | Status |
 |---|---|---|---|---|---|---|---|---|
 | S1 | context-md | Glossary | — | docs/context/glossary.md | git:3f2a9c1 | 2026-10-01 | (in repo) | active |
-| S2 | transcript | Data workshop | 2026-09-15 | meeting-transcript:///events/…?start=2026-09-15T14:00Z&end=2026-09-15T15:00Z | event:AAMk…@2026-09-15T14:00Z | 2026-10-01 | S2-data-workshop.md | active |
+| S2 | transcript | Data workshop | 2026-09-15 | file:///…/Data%20Workshop-20260915_140000-Meeting%20Transcript.docx | mod:2026-09-15T16:05Z | 2026-10-01 | S2-data-workshop.md | active |
 | S4 | slide-deck | Provider design review v1 | 2026-10-02 | file:///…/Provider%20review.pptx | mod:2026-10-02T09:10Z | 2026-10-03 | S4-provider-design-review.md | superseded by S5 |
 | S5 | slide-deck | Provider design review v2 | 2026-10-05 | file:///…/Provider%20review.pptx | mod:2026-10-05T16:22Z | 2026-10-08 | S5-provider-design-review.md | active |
 ```
@@ -140,15 +170,17 @@ Global source registry for this ERD. IDs are permanent and never reused. Metadat
   source was found**, not where the file lives:
   - `git:<blob>` for every `context_paths` match: `git hash-object <path>`, first 7 characters.
   - `sha256:<first 12 hex>` for **anything under `local_inputs`**, even if git tracks it: `sha256sum`.
-  - `event:<eventId>@<occurrenceStart>` for Teams transcripts.
-  - `mod:<lastModifiedDateTime>` for SharePoint items (from the search hit or `read_resource`).
+  - `mod:<lastModifiedDateTime>` for SharePoint items, transcripts included (from the search hit or `read_resource`).
 - **Ingested:** the run date that first staged this version of the source.
 - **Staged file:** relative to `<staging_dir>/<Ingested>/`, or `(in repo)` for context MDs.
 - **Status:** `active` | `superseded by S<m>`.
 - **Rows are sorted strictly by ID.**
-- **Location of a transcript** must include the occurrence window:
-  `meeting-transcript:///events/…?start=<iso>&end=<iso>`. Without it, every weekly occurrence of a
-  recurring series would match the previous row and wrongly supersede it.
+- **Legacy rows.** Rows with a `meeting-transcript:///` Location and an `event:` fingerprint stay valid;
+  IDs and citations never change. Discovery never re-reads a `meeting-transcript:///` Location. When a
+  SharePoint transcript hit's title and meeting date match such a row, show it at Gate A as "probably
+  already ingested as S<n>". If the user confirms, **relocate** the row: replace its Location and
+  Fingerprint with the file's, keep its ID, Ingested date and Status, and don't stage or re-analyse
+  it. If the user declines, the hit is a new source.
 - **Matching:** a source is *known* if its **Location** is already in the ledger. If its
   Fingerprint matches the active row, it is unchanged. If the Fingerprint differs, it is *changed*:
   it gets a new ID, and the old row becomes `superseded by S<new>`.
