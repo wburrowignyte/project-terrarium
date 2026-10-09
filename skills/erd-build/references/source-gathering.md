@@ -62,7 +62,7 @@ to `transcript_queries`, and set `transcript_folders` to scope the search to whe
      and staged. If neither gives a modified date, use `sha256:<12 hex>` of the **raw `read_resource` text** (before any
      normalization), so it can be recomputed from the remote file.
    - With no `transcript_folders` configured there is nothing to list, so discovery rests on the search
-     alone. Say so in the Gate A notice.
+     alone, and `.vtt` files, which are found only by listing, will not be seen. Say both in the Gate A notice.
 3. **Classify a hit as a transcript** when it's in a transcript folder, **or** its name or first page
    has transcript shape: speaker-labelled utterances with timestamps (`0:03:12`, `00:03:12.000 -->`).
    Anything else that matched a query is a candidate *document*, not a transcript. Handle it under §3.
