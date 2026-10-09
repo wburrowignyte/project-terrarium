@@ -418,8 +418,8 @@ Tests: `tools/erd-assist/test/slice.test.mjs` (`node:test`) cover each flag on t
 ### Decisions made while building
 - **`erd-slice` is one file** (`tools/erd-assist/erd-slice.mjs`) that exports `run`, `load`, `check` and `parseDecisions` for the tests, like `erd-view.mjs` exports `render`. `parse.mjs` is unchanged.
 - **Group in outline lines** shows `—` when the ERD has no Group bullets (the viewer derives groups, but the outline reports what the file says).
-- **`--check` output:** errors and warnings go to stderr as `error:` / `warning:`; stdout ends with `ok`, `ok (N warning(s))` or `N error(s)`. Exit 1 only for errors. A non-Active `[DEC-n]` citation, a header `Active` count that disagrees with the Index, and `parseErd` warnings are warnings; duplicate Index rows are errors.
-- **`--check <ids>` scope:** the given IDs, their 1-hop entity neighbours, and the relationships touching them. `parseErd` warnings are matched by ID or table name.
+- **`--check` output:** errors and warnings go to stderr as `error:` / `warning:`; stdout ends with `ok`, `ok (N warning(s))` or `N error(s)`. Exit 1 only for errors. A non-Active `[DEC-n]` citation, a header `Active` count that disagrees with the Index, a header `Last ID` above the highest Index ID, and `parseErd` warnings are warnings; duplicate Index rows and a `Last ID` below the highest Index ID (it would reissue an ID) are errors.
+- **`--check <ids>` scope:** the given IDs, their 1-hop entity neighbours, and the relationships touching them. `parseErd` warnings are matched by ID or table name. `DECISIONS.md` log-level issues (duplicate Index rows, header `Active` and `Last ID`) are always kept in the scoped output, because the assist session hand-edits those values.
 - **`--decisions` given but the file is missing** is treated as an empty log, so every `[DEC-n]` citation is then an error. With no `--decisions` and no `DECISIONS.md` beside the ERD, citations aren't checked.
 - **`E-n.field` slice** prints the entity heading with the field tag, the table header and the one row.
 - **Analyst agent:** the active-rules read is a "First step, every mode" section rather than a bullet in each mode. It points at `decisions-format.md` by repo path.
@@ -430,7 +430,7 @@ Tests: `tools/erd-assist/test/slice.test.mjs` (`node:test`) cover each flag on t
 `erd-view` on a copy of the baseline with `[DEC-1]` added to the E-11 `authorizedHoursPerWeek` Sources cell renders the same 14 entities and 18 relationships, with no new warnings, and the citation survives in the parsed model. No viewer change was needed.
 
 ### Verification results
-1. `node --test "tools/*/test/*.test.mjs"`: 52 pass (the existing `erd-view` tests plus 17 new `erd-slice` tests).
+1. `node --test "tools/*/test/*.test.mjs"`: 55 pass (the existing `erd-view` tests plus 20 new `erd-slice` tests).
 2. `claude plugin validate .` and `claude plugin validate .claude-plugin/plugin.json`: both pass.
 3. Budget on the baseline (19,474 bytes): `--outline` 1,964 bytes (10%), `--ids E-11 --neighbors` about 2.5 KB (13%). Asserted in the tests.
 4. **Scripted assist session** (scratch copy of `sample-project`, run headlessly as `claude -p … --continue` with `--permission-mode acceptEdits`): all six steps behaved as in `assist-expected.md`. No full `Read` of `ERD.md` or `DECISIONS.md` appears in any turn: only `erd-slice` calls, the active-rules `Grep`, `git diff --stat` and short `sed` ranges. Results: DEC-5 (`E-11.endDate` required, Version 1 to 2), DEC-6 (rename, no second bump), DEC-7 (asked "Supersede DEC-1?", then DEC-1 became `Superseded by DEC-7` in the Index and block), DEC-8 (decision-only, no ERD edit). `erd-slice --check` was ok at the end.

@@ -148,7 +148,7 @@ function neighborIds(v, ids) {
     if (set.has(r.from) && !set.has(r.to)) near.add(r.to);
     if (set.has(r.to) && !set.has(r.from)) near.add(r.from);
   }
-  return [...near].filter((id) => v.range.has(id));
+  return [...near].filter((id) => v.range.has(id) && v.byId.has(id));
 }
 
 function pick(v, ids, withNeighbors) {
@@ -160,10 +160,11 @@ function pick(v, ids, withNeighbors) {
     const [base, field] = id.split('.');
     if (/^E-\d+$/.test(base)) {
       const r = v.range.get(base);
-      if (!r) { unknown.push(id); continue; }
+      if (!r || !v.byId.has(base)) { unknown.push(id); continue; }
       if (!entIds.includes(base)) entIds.push(base);
       if (!field) { out.push(slice(v.sc, r.start, r.end)); continue; }
       const e = v.byId.get(base);
+      if (!e) { unknown.push(id); continue; }
       const want = field.toLowerCase();
       const fi = e.fields.find((f) => [f.field, f.column].some((x) => x && x.toLowerCase() === want));
       if (!fi) { unknown.push(id); continue; }
@@ -223,7 +224,7 @@ function nextIds(v) {
 // ---- --check
 export function check(v, ids) {
   const issues = [];
-  const add = (level, touches, msg) => issues.push({ level, touches, msg });
+  const add = (level, touches, msg, log = false) => issues.push({ level, touches, msg, log });
   const { model, ents } = v;
   const entIds = new Set(ents.map((e) => e.id));
 
@@ -276,9 +277,13 @@ export function check(v, ids) {
       if (!d) add('error', [...where], `[DEC-${k}] cited at ${at} is not in the DECISIONS.md Index`);
       else if (d.status !== 'Active') add('warning', [...where], `[DEC-${k}] cited at ${at} is not Active (${d.status})`);
     }
-    for (const [k, d] of v.decisions.index) if (d.dup) add('error', [], `DEC-${k}: duplicate Index row`);
+    for (const [k, d] of v.decisions.index) if (d.dup) add('error', [], `DEC-${k}: duplicate Index row`, true);
     const act = [...v.decisions.index.values()].filter((d) => d.status === 'Active').length;
-    if (v.decisions.active != null && v.decisions.active !== act) add('warning', [], `DECISIONS.md header says Active ${v.decisions.active}, the Index has ${act}`);
+    if (v.decisions.active != null && v.decisions.active !== act) add('warning', [], `DECISIONS.md header says Active ${v.decisions.active}, the Index has ${act}`, true);
+    // The next DEC ID comes from Last ID, so a stale value would reissue an ID.
+    const top = Math.max(0, ...v.decisions.index.keys());
+    if (v.decisions.last < top) add('error', [], `DECISIONS.md header says Last ID DEC-${v.decisions.last}, but the Index has DEC-${top}`, true);
+    else if (v.decisions.last > top) add('warning', [], `DECISIONS.md header says Last ID DEC-${v.decisions.last}, the highest Index ID is DEC-${top}`, true);
   }
 
   // parseErd warnings
@@ -288,7 +293,7 @@ export function check(v, ids) {
   }
 
   if (!ids?.length) return issues;
-  // Only issues touching the given IDs and their 1-hop neighbours.
+  // Only issues touching the given IDs and their 1-hop neighbours. DECISIONS.md log-level issues are always kept.
   const want = new Set();
   for (const raw of ids) {
     const b = baseId(raw);
@@ -300,7 +305,7 @@ export function check(v, ids) {
     for (const r of model.relationships) if (r.from === e || r.to === e) want.add(r.id);
   }
   for (const e of ents) if (want.has(e.id)) want.add(e.table);
-  return issues.filter((i) => i.touches.some((t) => want.has(t)));
+  return issues.filter((i) => i.log || i.touches.some((t) => want.has(t)));
 }
 
 // ---- entry point

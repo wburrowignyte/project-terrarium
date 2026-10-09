@@ -134,6 +134,36 @@ test('--check with ids reports only nearby issues', () => {
   assert.equal(run(md, { check: true, checkIds: ['E-14'] }).errors, 0); // E-14 County is not within one hop of E-11
 });
 
+test('--check <ids> keeps DECISIONS.md log-level issues (hand-edited header, duplicate row)', () => {
+  const badActive = decisions.replace('| Active | 1 |', '| Active | 99 |');
+  const scoped = run(baseline, { check: true, checkIds: ['E-11'] }, badActive);
+  assert.ok(scoped.stderr.some((l) => l.startsWith('warning:') && l.includes('header says Active 99')));
+  assert.notEqual(scoped.stdout, 'ok');
+  const dup = decisions + '| DEC-1 | 2026-10-02 | Active | E-3 | again |\n';
+  const r = run(baseline, { check: true, checkIds: ['E-14'] }, dup);
+  assert.ok(r.errors > 0 && r.stderr.some((l) => l.includes('DEC-1') && l.includes('duplicate')));
+  // unrelated scoped issues are still filtered out
+  const fk = baseline.replace('| FK→E-8 | Child receiving care', '| FK→E-99 | Child receiving care');
+  assert.equal(run(fk, { check: true, checkIds: ['E-14'] }, decisions).errors, 0);
+});
+
+test('--check catches a stale Last ID (error) and a too-high one (warning)', () => {
+  const stale = decisions.replace('| Last ID | DEC-2 |', '| Last ID | DEC-1 |');
+  const r = run(baseline, { check: true }, stale);
+  assert.ok(r.errors > 0 && r.stderr.some((l) => l.startsWith('error:') && l.includes('Last ID DEC-1')));
+  assert.ok(run(baseline, { check: true, checkIds: ['E-11'] }, stale).errors > 0);
+  const high = decisions.replace('| Last ID | DEC-2 |', '| Last ID | DEC-5 |');
+  const w = run(baseline, { check: true }, high);
+  assert.equal(w.errors, 0);
+  assert.ok(w.stderr.some((l) => l.startsWith('warning:') && l.includes('Last ID DEC-5')));
+});
+
+test('--ids on an ### E-n heading that parseErd did not parse reports not found instead of throwing', () => {
+  const md = baseline.replace('### E-14 CCA County (`CCA_COUNTY`)', '### E-14 CCA County');
+  const { stdout } = run(md, { ids: ['E-14', 'E-14.name'], neighbors: true });
+  assert.match(stdout, /not found: E-14, E-14\.name/);
+});
+
 test('parseDecisions reads the Index and header', () => {
   const d = parseDecisions(decisions);
   assert.equal(d.last, 2);
