@@ -193,8 +193,20 @@ only; formats recorded, no content kept.
 **Verification.** `claude plugin validate .` passes. Final grep hits only the alias text, the legacy-row
 rule, the superseded notes and the historical design docs. An end-to-end `/project-terrarium:erd-build` on a
 copy of the sample project completed with local transcripts only: 66 `[S3/S4 @HH:MM:SS]` citations, no
-calendar call, no deprecation warning. **Not run:** §7.3 (deprecation alias), §7.4 (maintain fixtures),
-§7.5 (legacy ledger row), and a live build against the SharePoint folder.
+calendar call, no deprecation warning.
+
+§7.4 maintain (scratch copy of the sample project with `baseline/`, no remote calls): finds S4 and S5 as new
+and S1–S3 as known. The change set covers every op in `maintain-expected.md` (class, op and target match).
+It also adds a shared `CCA_LOOKUP` table for the age-group reference, per the current LOOKUP convention. A re-run with
+no changes writes nothing (`ERD.md` and `sources.md` byte-identical). The `maintain` run auto-rejected one optional
+`raise-question` op despite the auto-accept prompt; this is an LLM judgment call, not a spec issue.
+
+§7.5 legacy ledger (same setup plus an `S4` row with a `meeting-transcript:///` Location and an `event:` fingerprint):
+the row is kept byte-for-byte, isn't re-read ("S4 was not re-read; legacy-format row"), no calendar call is made, and
+the new sources get S5/S6. The relocation **offer** couldn't be exercised, because it needs a matching SharePoint
+hit and the scratch config has no remote sources.
+
+**Not run:** §7.3 (deprecation alias), the relocation offer in §7.5, and a live build against the SharePoint folder.
 
 **Deviations / follow-ups.**
 - `docs/TECH_DEBT.md` is not on `dev`; TD-1 not updated.
