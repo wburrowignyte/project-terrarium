@@ -50,9 +50,10 @@ context_paths:
   - "docs/context/**/*.md"
 
 sharepoint:
-  meeting_series:           # calendar subject keywords used to find meetings and their transcripts
+  transcript_folders:       # folders where meeting transcripts (.docx / .vtt / .txt) are saved
+    - "Meeting Transcripts"
+  transcript_queries:       # content/name keywords that identify project meetings, e.g. series titles
     - "Data Workshop"
-  transcript_folders: []    # optional: folders holding exported .vtt/.docx transcripts
   folders: []               # optional: pinned folders for doc search
   deck_folders: []          # optional: folders where slide decks are uploaded (narrows pptx/pdf search)
   doc_queries:              # content searches for supporting documents
