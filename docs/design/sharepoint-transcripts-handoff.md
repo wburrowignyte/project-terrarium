@@ -174,14 +174,14 @@ and this handoff.
 ## Implementation notes
 (Builder: record decisions, connector findings from §7.1, and deviations here.)
 
-**Connector findings (§7.1), 2026-10-09.** Run against `Client Work/MN DHS Appeals Case Management`
+**Connector findings (§7.1), 2026-10-09.** Run against one client engagement folder (`<client folder>`)
 only; formats recorded, no content kept.
 - `sharepoint_search` / `sharepoint_folder_search` / `read_resource` match the §2 signatures.
 - `sharepoint_folder_search` **returns files as well as folders** when names match, so step 1 of
   discovery now keeps only folder hits. `sharepoint_search(folderName=…)` is a **partial name match
-  and leaked a hit from another library** (`Ignyte Proposals`); discovery now checks each hit's `webUrl`
+  and leaked a hit from another library** (an unrelated proposals library); discovery now checks each hit's `webUrl`
   against the resolved folder path.
-- Real transcripts are `.docx`, saved in per-meeting subfolders (e.g. `Discovery and Design/<n>. <Topic>_<MMDDYYYY>/`),
+- Real transcripts are `.docx`, saved in per-meeting subfolders (e.g. `<phase>/<n>. <Topic>_<MMDDYYYY>/`),
   named like `…_Transcript_10072026.docx`. That is not Teams' default name, so date parsing also accepts `MMDDYYYY` after `_`.
 - A `.docx` read returns **flattened text** with sparse line breaks: a title/duration header, then
   `<Speaker>   <H:MM:SS or M:SS>  <text>` runs. Timestamps are unpadded (`0:09`, `1:02:07`). The footer was
@@ -218,16 +218,16 @@ config was not modified.
 - Remove the `meeting_series` alias in the next minor version.
 - Plugin version bumped 0.4.0 → 0.5.0.
 
-**Live discovery dry run (stopped at Gate A, 2026-10-09).** Scoped to `Client Work/MN DHS Appeals Case Management`;
+**Live discovery dry run (stopped at Gate A, 2026-10-09).** Scoped to `<client folder>`;
 no transcript content read. Findings:
 - **Search recall is unreliable.** Repeating `sharepoint_search(query="transcript", fileType=docx, folderName=<folder>)`
   returned different sets on different calls (totals 18, then 14), and the 14-hit run missed real transcripts.
-  `query="started transcription"` (scoped to `Discovery and Design`) found 5 of the 7 known transcripts. One more
-  (`…Case Intake _ Assignment-20261007_Transcription.docx`, 5 MB) appeared **only** in a folder listing via `read_resource`.
+  `query="started transcription"` (scoped to the phase folder) found 5 of the 7 known transcripts. One more
+  (a `<meeting>_Transcription.docx` of several MB) appeared **only** in a folder listing via `read_resource`.
   Search alone can miss transcripts; consider also listing each resolved `transcript_folders` folder (and its subfolders)
   with `read_resource` as a second discovery pass. **Not yet in the spec; needs a decision.**
-- `folderName` filters leak: hits from `Ignyte Proposals/…` and `Shared Documents/Forms/…` came back; all were dropped by the `webUrl` check.
-- Transcripts are named inconsistently (`…_Transcript_10072026`, `…_transcript_10022026`, `…_10052026`, no date, `…_Transcription.docx`),
+- `folderName` filters leak: hits from another library and from `Shared Documents/Forms/…` came back; all were dropped by the `webUrl` check.
+- Transcripts are named inconsistently (`…_Transcript_<MMDDYYYY>`, `…_transcript_<MMDDYYYY>`, `…_<MMDDYYYY>`, no date, `…_Transcription.docx`),
   so date parsing falls back to the `Meeting Recording` header date or `lastModifiedDateTime` fairly often.
 
 **Spec change after the dry run.** `source-gathering.md` §2 step 2 and `delta-discovery.md` §2 now add a
@@ -235,7 +235,7 @@ folder **listing pass** (recursive, 3 levels) merged with the search hits by URI
 so it is looked up with a name search, and the watermark is applied after merging. Listed `.docx` files without a
 transcript marker in the name show as "unclassified" at Gate A. Not yet run live.
 
-**Live listing and read (2026-10-09).** Listing `Discovery and Design/` with `read_resource` shows subfolders as
+**Live listing and read (2026-10-09).** Listing the phase folder with `read_resource` shows subfolders as
 `<name> (folder, <bytes> bytes) <uri>` and files as `(file, <bytes> bytes) <uri>`, and it also lists `.pptx`, `.xlsx`
 and `.eml` files, so the extension filter and the "unclassified" rule are needed. Real speaker labels include
 `Last, First M (ORG)`, not only `First Last`; `source-gathering.md` now says to anchor on the timestamp marker and not

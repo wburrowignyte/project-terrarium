@@ -30,7 +30,8 @@ Work one question at a time. Explore first, propose values, and confirm before y
 5. Where are meeting transcripts saved in SharePoint (folder names)? And what keywords identify the
    project's meetings (e.g. "DHS Data Workshop")? Explain the expected practice: the team downloads each
    meeting's transcript (Teams/Stream → Transcript → Download `.docx` preferred, or `.vtt`) and saves
-   it to that folder.
+   it to that folder. If the user doesn't know, leave `transcript_folders` empty rather than writing the
+   example folder name. Only write names the user gave you.
 6. **SharePoint**: pinned folder name(s) to narrow searches, and doc topics to search
    (e.g. "data dictionary", "requirements", "business rules").
    6b. **Slide decks**: where are they uploaded? (folder names, optional; narrows the pptx/pdf search)
@@ -54,7 +55,7 @@ context_paths:
 
 sharepoint:
   transcript_folders:       # folders where meeting transcripts (.docx / .vtt / .txt) are saved
-    - "Meeting Transcripts"
+    - "Meeting Transcripts"   # example only: replace with the user's folder, or leave the list empty
   transcript_queries:       # content/name keywords that identify project meetings, e.g. series titles
     - "Data Workshop"
   folders: []               # optional: pinned folders for doc search

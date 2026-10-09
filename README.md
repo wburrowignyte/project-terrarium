@@ -86,6 +86,12 @@ node tools/erd-view/erd-view.mjs ERD.md -o out.html --open
 Or run `/project-terrarium:erd-view`. `ERD.html` is git-ignored because it embeds the ERD text.
 Tests: `node --test "tools/erd-view/test/*.test.mjs"`.
 
+## Deprecations
+
+- **0.5.0:** `sharepoint.meeting_series` is deprecated. Rename it to `sharepoint.transcript_queries` and set
+  `sharepoint.transcript_folders`. The old key is still read, with a warning, and is removed in the next
+  minor version. The calendar / `meetingTranscriptUrl` path no longer exists.
+
 ## Install (in the project repo)
 
 ```bash

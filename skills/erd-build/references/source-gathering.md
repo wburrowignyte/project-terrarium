@@ -27,14 +27,17 @@ If both `sharepoint.transcript_folders` and `sharepoint.transcript_queries` are 
 transcript discovery with a one-line notice. `local_inputs` still works.
 If the deprecated `sharepoint.meeting_series` key is present, treat its entries as extra
 `transcript_queries` and print once per run: "`sharepoint.meeting_series` is deprecated; rename it
-to `transcript_queries`".
+to `transcript_queries`, and set `transcript_folders` to scope the search to where transcripts are saved".
 
 1. **Resolve folders.** For each `transcript_folders` entry, `sharepoint_folder_search(name)`. The
-   result can include **files** whose names match as well as folders. Keep only folder hits (a hit
-   whose `webUrl` has no file extension, or that `read_resource` lists as a folder). If more than one
+   result can include **files** whose names match as well as folders. Keep only folder hits. The test is
+   `read_resource` on the hit: a folder returns a listing, a file returns content, so prefer that. As a
+   cheap pre-filter only, a `webUrl` ending in a known file extension (`docx|vtt|txt|pptx|pdf|xlsx|eml|mp4|png`)
+   is a file. Don't treat any dot in the name as an extension: folders such as `v1.2` or `Q3.2026` are common. If more than one
    folder matches, show them at Gate A with their paths and let the user pick. If none match,
    report it.
-2. **Search.** For each `fileType` in `docx`, `vtt`, `txt`:
+2. **Search.** For each `fileType` in `docx`, `txt`, and also `vtt` unless a previous run found
+   that the connector can't read `.vtt` (then find `.vtt` files by listing only and report them under Not included):
    - with folders: `sharepoint_search(query = <project name or each transcript_query>, fileType, folderName = <folder>)`
    - with no folders: `sharepoint_search(query = <each transcript_query>, fileType)`
    - add `afterDateTime` / `beforeDateTime` from the run scope or the user's filter argument
@@ -49,10 +52,14 @@ to `transcript_queries`".
      often saved one subfolder per session), up to 3 levels deep.
    - Keep `.docx`, `.vtt` and `.txt` entries. Ignore everything else, and report `.mp4`/`.m4a` entries
      under Not included (step 5).
-   - A listing gives name, size and URI but **no modified date**. Merge by URI with the search hits. For a
-     listed file with no search hit, get its `lastModifiedDateTime` with
+   - A listing gives name, size and URI but **no modified date**. Merge by URI with the search hits.
+     **Skip the date lookup for a listed file whose Location is already in the ledger**, unless
+     the run is a maintain run (below); a re-run of `erd-build` doesn't need it. For any other listed file
+     with no search hit, get its `lastModifiedDateTime` with
      `sharepoint_search(query = <file name>, folderName = <its folder>)`. If that finds nothing, show the
-     date as unknown at Gate A and leave the `mod:` fingerprint blank until the file is read.
+     date as unknown at Gate A and keep the file as a candidate. **A ledger row is never written with an
+     empty Fingerprint:** the `mod:` value is taken from `read_resource` or the search hit when the file is read
+     and staged. If neither gives a modified date, use `sha256:<12 hex>` of the staged text instead.
    - With no `transcript_folders` configured there is nothing to list, so discovery rests on the search
      alone. Say so in the Gate A notice.
 3. **Classify a hit as a transcript** when it's in a transcript folder, **or** its name or first page
@@ -138,10 +145,14 @@ it: utterances run together as `<Speaker>  <H:MM:SS or M:SS>  <text>`, and line 
 unreliable. Split on the **timestamp marker** (two or more spaces, `H:MM:SS` or `M:SS`, one or two
 spaces, then text). Take the speaker from the text between the previous double-space boundary and the
 marker. Don't assume `First Last`: labels also look like `Last, First M (ORG)`. Normalize to one line per
-utterance, `[HH:MM:SS] Speaker: text` (zero-pad the timestamp). A `.vtt` normalizes the same way, using
-the cue start time. Spot-check the first few lines before staging the rest. If a transcript has no
-timestamps, stage it as is and add `no timestamps; cite by §<speaker turn n>` to its header. The
-analyst then cites `[S<n> §turn <k>]`.
+utterance, `[HH:MM:SS] Speaker: text`. `M:SS` becomes `00:MM:SS` (`1:02` → `00:01:02`) and `H:MM:SS`
+becomes `HH:MM:SS` (`1:02:07` → `01:02:07`). A `.vtt` normalizes the same way, using the cue start time.
+**Sanity-check the result before staging.** Timestamps must be non-decreasing, the last timestamp should be
+close to the duration in the header (when there is one), and no utterance should be empty. A marker-like
+string inside speech (for example a spoken "3:30 appointment" after two spaces) can cause a false split, and
+this check catches the worst cases. If any check fails, don't emit timestamps: stage the transcript untimed
+instead. If a transcript has no timestamps, stage it as is and add `no timestamps; cite by §<speaker turn n>`
+to its header. The analyst then cites `[S<n> §turn <k>]`; `erd-format.md` defines the numbering.
 
 **Slide decks** stage as one `## Slide <k>: <title>` section per slide (1-based), then the body
 text, tables, and the speaker notes as `**Notes:** <text>`. A slide with under ~15 words **and** a
@@ -197,9 +208,17 @@ Global source registry for this ERD. IDs are permanent and never reused. Metadat
 - **Legacy rows.** Rows with a `meeting-transcript:///` Location and an `event:` fingerprint stay valid;
   IDs and citations never change. Discovery never re-reads a `meeting-transcript:///` Location. When a
   SharePoint transcript hit's title and meeting date match such a row, show it at Gate A as "probably
-  already ingested as S<n>". If the user confirms, **relocate** the row: replace its Location and
-  Fingerprint with the file's, keep its ID, Ingested date and Status, and don't stage or re-analyse
-  it. If the user declines, the hit is a new source.
+  already ingested as S<n>". Offer this **only when the hit's date was parsed from its filename** (an
+  exact date), never from the `~modified` fallback: legacy titles are calendar subjects, and a wrong match
+  would attach a different file to an existing S-ID and its citations. If the user confirms, **relocate**
+  the row: replace its Location and Fingerprint with the file's, keep its ID, Ingested date and Status,
+  and don't stage or re-analyse it. If the user declines, the hit is a new source.
+- **Moved, renamed or re-saved transcripts.** Identity is by Location, so a re-download saved under a new
+  name or folder looks like a new source. When a new transcript hit has the same exact meeting date and a
+  similar title as an **active** transcript row with a different Location, show it at Gate A as "possibly
+  the same meeting as S<n>". The user picks **new source** or **replaces S<n>**. If the file at the old
+  Location still exists, it's a different file: treat the hit as new. "Replaces" supersedes the old row as a
+  *changed* source: new ID, old row `superseded by S<new>`.
 - **Matching:** a source is *known* if its **Location** is already in the ledger. If its
   Fingerprint matches the active row, it is unchanged. If the Fingerprint differs, it is *changed*:
   it gets a new ID, and the old row becomes `superseded by S<new>`.

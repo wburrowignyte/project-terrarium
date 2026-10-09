@@ -33,7 +33,7 @@ structure exactly: section order, heading text, and table columns are what later
 | Form | Used for |
 |---|---|
 | `[S<n> @HH:MM:SS]` | transcript, by timestamp |
-| `[S<n> §turn <k>]` | transcript without timestamps, by speaker turn |
+| `[S<n> §turn <k>]` | transcript without timestamps, by speaker turn (`k` is the 1-based turn in the staged file; consecutive lines by the same speaker are one turn) |
 | `[S<n> §Section]` | document, by section |
 | `[S<n> slide <k>]` | slide deck, by 1-based slide number |
 | `ASSUMPTION` / `CONVENTION` | no source (see above) |
