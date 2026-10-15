@@ -78,7 +78,7 @@ td.mono,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;f
     <select id="hops"><option value="1">Selected + 1 hop</option><option value="2">Selected + 2 hops</option><option value="3">Selected + 3 hops</option></select>
     <div style="margin-top:6px;display:flex;gap:6px"><button class="btn" id="focusbtn">Focus selected</button><button class="btn" id="showall">Show all</button></div>
     <label class="row" style="margin-top:10px"><input type="checkbox" id="isolated" checked> Show entities with no relationships</label>
-    <label class="row" id="deprow"><input type="checkbox" id="deprecated" checked> Show deprecated <small id="depn" style="color:var(--muted)"></small></label>
+    <label class="row" id="deprow"><input type="checkbox" id="deprecated"> Show deprecated <small id="depn" style="color:var(--muted)"></small></label>
   </aside>
   <div id="stage" class="page-diagram">
     <svg id="svg" role="img" aria-label="Entity relationship diagram"><g id="vp"></g></svg>
@@ -114,7 +114,11 @@ const byId = new Map(ents.map((e) => [e.id, e]));
 const nbrs = new Map(ents.map((e) => [e.id, new Set()]));
 const relsOf = new Map(ents.map((e) => [e.id, []]));
 const drawnRels = rels.filter((r) => !r.lookup), dnbrs = new Map(ents.map((e) => [e.id, new Set()]));
-for (const r of drawnRels) { dnbrs.get(r.from)?.add(r.to); dnbrs.get(r.to)?.add(r.from); }
+const liveNbrs = new Map(ents.map((e) => [e.id, new Set()]));
+for (const r of drawnRels) {
+  dnbrs.get(r.from)?.add(r.to); dnbrs.get(r.to)?.add(r.from);
+  if (!r.deprecated && !byId.get(r.from)?.deprecated && !byId.get(r.to)?.deprecated) { liveNbrs.get(r.from)?.add(r.to); liveNbrs.get(r.to)?.add(r.from); }
+}
 const allGroups = (MODEL.groups.length ? MODEL.groups.map((g) => g.name) : [...new Set(ents.map((e) => e.group).filter(Boolean))]);
 for (const r of rels) { nbrs.get(r.from)?.add(r.to); nbrs.get(r.to)?.add(r.from); relsOf.get(r.from)?.push(r); if (r.to !== r.from) relsOf.get(r.to)?.push(r); }
 const kindVar = { 'Core': '--k-core', 'Reference': '--k-ref', 'Junction': '--k-junction', 'History/Audit': '--k-history', 'Unspecified': '--k-other', 'Lookup': '--k-lookup' };
@@ -122,11 +126,11 @@ const sensOf = (e) => { const m = (e.sensitivity || '').match(/PHI|PII|FTI|CJI/g
 const SENS = ['PHI', 'PII', 'FTI', 'CJI'];
 
 /* ---------- state ---------- */
-const state = { kinds: new Set(), sens: new Set(), groups: new Set(allGroups), layout: 'grouped', fieldMode: ents.length > 40 ? 'none' : 'all', selected: null, focus: null, matches: new Set(), showIsolated: true, showDeprecated: true, edgeMode: drawnRels.length > 80 ? 'selected' : 'all', tx: 0, ty: 0, k: 1 };
+const state = { kinds: new Set(), sens: new Set(), groups: new Set(allGroups), layout: 'grouped', fieldMode: ents.length > 40 ? 'none' : 'all', selected: null, focus: null, matches: new Set(), showIsolated: true, showDeprecated: false, edgeMode: drawnRels.length > 80 ? 'selected' : 'all', tx: 0, ty: 0, k: 1 };
 const allKinds = [...new Set(ents.map(kindOf))];
 allKinds.forEach((k) => state.kinds.add(k));
 SENS.concat(['None']).forEach((s) => state.sens.add(s));
-$('#fieldmode').value = state.fieldMode; $('#edgemode').value = state.edgeMode;
+$('#fieldmode').value = state.fieldMode; $('#edgemode').value = state.edgeMode; $('#deprecated').checked = state.showDeprecated;
 $('#layoutmode').addEventListener('change', (e) => { state.layout = e.target.value; rebuild(true); });
 $('#edgemode').addEventListener('change', (e) => { state.edgeMode = e.target.value; rebuild(true); });
 
@@ -167,13 +171,18 @@ $('#sens').innerHTML = SENS.concat(['None']).map((s) => `<label class="row"><inp
 $('#kinds').addEventListener('change', (e) => { const k = e.target.dataset.kind; e.target.checked ? state.kinds.add(k) : state.kinds.delete(k); rebuild(true); });
 $('#sens').addEventListener('change', (e) => { const k = e.target.dataset.sens; e.target.checked ? state.sens.add(k) : state.sens.delete(k); rebuild(true); });
 $('#fieldmode').addEventListener('change', (e) => { state.fieldMode = e.target.value; rebuild(true); });
-const depCount = ents.filter((e) => e.deprecated).length;
-if (!depCount) $('#deprow').style.display = 'none'; else $('#depn').textContent = depCount;
+const depEnts = ents.filter((e) => e.deprecated).length, depRels = drawnRels.filter((r) => r.deprecated).length;
+if (!depEnts && !depRels) $('#deprow').style.display = 'none';
+else $('#depn').textContent = [depEnts && `${depEnts} ${depEnts === 1 ? 'table' : 'tables'}`, depRels && `${depRels} ${depRels === 1 ? 'relationship' : 'relationships'}`].filter(Boolean).join(' · ');
 $('#deprecated').addEventListener('change', (e) => { state.showDeprecated = e.target.checked; rebuild(true); });
 $('#isolated').addEventListener('change', (e) => { state.showIsolated = e.target.checked; rebuild(true); });
 $('#focusbtn').addEventListener('click', () => { if (state.selected) { state.focus = { id: state.selected, hops: +$('#hops').value }; rebuild(true); } });
 $('#showall').addEventListener('click', () => { state.focus = null; rebuild(true); });
 
+function relVisible(r, vis) {
+  if (!vis.has(r.from) || !vis.has(r.to)) return false;
+  return state.showDeprecated || !r.deprecated || r.from === state.selected || r.to === state.selected;
+}
 function visibleSet() {
   let ids = new Set();
   if (state.focus) {
@@ -187,8 +196,8 @@ function visibleSet() {
       if (e.group && allGroups.includes(e.group) && !state.groups.has(e.group)) return false;
       const s = sensOf(e); if (!(s.length ? s.some((x) => state.sens.has(x)) : state.sens.has('None'))) return false;
     }
-    if (!state.showDeprecated && e.deprecated && id !== state.selected) return false;
-    if (!state.showIsolated && !state.focus && !e.isLookup && dnbrs.get(id).size === 0) return false;
+    if (!state.showDeprecated && e.deprecated && id !== state.selected && id !== state.focus?.id) return false;
+    if (!state.showIsolated && !state.focus && !e.isLookup && (state.showDeprecated ? dnbrs : liveNbrs).get(id).size === 0) return false;
     return true;
   }));
 }
@@ -243,7 +252,7 @@ function rebuild(refit) {
   const vis = visibleSet();
   if (state.selected && !vis.has(state.selected)) state.selected = null;
   const nodes = ents.filter((e) => vis.has(e.id)).map((e) => ({ id: e.id, e, kind: kindOf(e), group: e.group, ...sizeNode(e), x: 0, y: 0 }));
-  const edges = drawnRels.filter((r) => vis.has(r.from) && vis.has(r.to));
+  const edges = drawnRels.filter((r) => relVisible(r, vis));
   // A small focus view reads better without group frames, so it uses the compact layout.
   const mode = state.layout === 'compact' || (state.focus && nodes.length <= 6) ? 'compact' : 'grouped';
   const hidden = state.edgeMode === 'selected'; // lines show only for the selection, so the gutters can stay tight
