@@ -486,8 +486,13 @@ mini.addEventListener('pointerdown', (e) => {
 });
 
 /* ---------- selection / detail ---------- */
+// Selection reveals a deprecated entity and its deprecated lines, so it can change what is drawn.
+const revealsDeprecated = (id) => !!id && (!!byId.get(id).deprecated || relsOf.get(id).some((r) => !r.lookup && r.deprecated));
 function select(id) {
-  state.selected = id; restyle(); renderDetail();
+  const prev = state.selected;
+  state.selected = id;
+  if (!state.showDeprecated && prev !== id && (revealsDeprecated(prev) || revealsDeprecated(id))) { rebuild(false); return; }
+  restyle(); renderDetail();
 }
 function renderDetail() {
   const d = $('#detail'), id = state.selected;
