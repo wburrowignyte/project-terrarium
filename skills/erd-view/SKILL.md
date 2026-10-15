@@ -38,6 +38,7 @@ Arguments: `$ARGUMENTS` (optional path to the ERD; empty means the project's ERD
   selects an entity and highlights its neighbors, double-click zooms to it, *Focus selected* shows only an
   entity's N-hop neighborhood, hiding Reference tables in the Kind filter or unticking groups in the Group filter
   removes clutter on large models.
+- Deprecated tables and relationships are hidden by default. **Show deprecated** in the side panel reveals them, dashed.
 - Tables are drawn in group frames in the `## Groups` order, Core on top. If the viewer's header shows
   *groups inferred*, the ERD has no `## Groups` section: the grouping is a guess from the relationships, and the
   warnings tab says how to fix it (an `erd-analyst` revise run adds Groups).
