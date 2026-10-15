@@ -183,10 +183,10 @@ $('#showall').addEventListener('click', () => { state.focus = null; rebuild(true
 // relationship count in the status line.
 const touchesRoot = (r) => [state.selected, state.focus?.id].some((id) => id && (r.from === id || r.to === id));
 const edgeShown = (r) => state.showDeprecated || !r.deprecated || touchesRoot(r);
-// Focus hops skip deprecated relationships (and the deprecated neighbours they lead to) unless the box is ticked.
+// Focus hops skip deprecated relationships and deprecated tables (so a path never runs through a hidden table) unless the box is ticked.
 function hopNbrs(id) {
   if (state.showDeprecated) return nbrs.get(id) || [];
-  return [...(nbrs.get(id) || [])].filter((n) => relsOf.get(id).some((r) => (r.from === n || r.to === n) && (!r.deprecated || r.from === state.focus.id || r.to === state.focus.id)));
+  return [...(nbrs.get(id) || [])].filter((n) => !byId.get(n).deprecated || n === state.focus.id).filter((n) => relsOf.get(id).some((r) => (r.from === n || r.to === n) && (!r.deprecated || r.from === state.focus.id || r.to === state.focus.id)));
 }
 const sceneSig = () => [...visibleSet()].join();
 function visibleSet() {
@@ -314,7 +314,7 @@ function drawEdges(list, paths) {
 function syncEdges() {
   if (!scene.lazy) return;
   const sel = state.selected, hasMatch = state.matches.size > 0;
-  const ids = scene.edges.filter((e) => edgeShown(e) && (sel && (e.from === sel || e.to === sel)) || (hasMatch && (state.matches.has(e.from) || state.matches.has(e.to)))).map((e) => e.id);
+  const ids = scene.edges.filter((e) => edgeShown(e) && ((sel && (e.from === sel || e.to === sel)) || (hasMatch && (state.matches.has(e.from) || state.matches.has(e.to))))).map((e) => e.id);
   const key = ids.join(',');
   if (key === scene.drawnKey) return;
   scene.drawnKey = key;
