@@ -78,7 +78,7 @@ td.mono,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;f
     <select id="hops"><option value="1">Selected + 1 hop</option><option value="2">Selected + 2 hops</option><option value="3">Selected + 3 hops</option></select>
     <div style="margin-top:6px;display:flex;gap:6px"><button class="btn" id="focusbtn">Focus selected</button><button class="btn" id="showall">Show all</button></div>
     <label class="row" style="margin-top:10px"><input type="checkbox" id="isolated" checked> Show entities with no relationships</label>
-    <label class="row" id="deprow"><input type="checkbox" id="deprecated" checked> Show deprecated <small id="depn" style="color:var(--muted)"></small></label>
+    <label class="row" id="deprow"><input type="checkbox" id="deprecated"> Show deprecated <small id="depn" style="color:var(--muted)"></small></label>
   </aside>
   <div id="stage" class="page-diagram">
     <svg id="svg" role="img" aria-label="Entity relationship diagram"><g id="vp"></g></svg>
@@ -114,7 +114,11 @@ const byId = new Map(ents.map((e) => [e.id, e]));
 const nbrs = new Map(ents.map((e) => [e.id, new Set()]));
 const relsOf = new Map(ents.map((e) => [e.id, []]));
 const drawnRels = rels.filter((r) => !r.lookup), dnbrs = new Map(ents.map((e) => [e.id, new Set()]));
-for (const r of drawnRels) { dnbrs.get(r.from)?.add(r.to); dnbrs.get(r.to)?.add(r.from); }
+const liveNbrs = new Map(ents.map((e) => [e.id, new Set()]));
+for (const r of drawnRels) {
+  dnbrs.get(r.from)?.add(r.to); dnbrs.get(r.to)?.add(r.from);
+  if (!r.deprecated && !byId.get(r.from)?.deprecated && !byId.get(r.to)?.deprecated) { liveNbrs.get(r.from)?.add(r.to); liveNbrs.get(r.to)?.add(r.from); }
+}
 const allGroups = (MODEL.groups.length ? MODEL.groups.map((g) => g.name) : [...new Set(ents.map((e) => e.group).filter(Boolean))]);
 for (const r of rels) { nbrs.get(r.from)?.add(r.to); nbrs.get(r.to)?.add(r.from); relsOf.get(r.from)?.push(r); if (r.to !== r.from) relsOf.get(r.to)?.push(r); }
 const kindVar = { 'Core': '--k-core', 'Reference': '--k-ref', 'Junction': '--k-junction', 'History/Audit': '--k-history', 'Unspecified': '--k-other', 'Lookup': '--k-lookup' };
@@ -122,11 +126,11 @@ const sensOf = (e) => { const m = (e.sensitivity || '').match(/PHI|PII|FTI|CJI/g
 const SENS = ['PHI', 'PII', 'FTI', 'CJI'];
 
 /* ---------- state ---------- */
-const state = { kinds: new Set(), sens: new Set(), groups: new Set(allGroups), layout: 'grouped', fieldMode: ents.length > 40 ? 'none' : 'all', selected: null, focus: null, matches: new Set(), showIsolated: true, showDeprecated: true, edgeMode: drawnRels.length > 80 ? 'selected' : 'all', tx: 0, ty: 0, k: 1 };
+const state = { kinds: new Set(), sens: new Set(), groups: new Set(allGroups), layout: 'grouped', fieldMode: ents.length > 40 ? 'none' : 'all', selected: null, focus: null, matches: new Set(), showIsolated: true, showDeprecated: false, edgeMode: drawnRels.length > 80 ? 'selected' : 'all', tx: 0, ty: 0, k: 1 };
 const allKinds = [...new Set(ents.map(kindOf))];
 allKinds.forEach((k) => state.kinds.add(k));
 SENS.concat(['None']).forEach((s) => state.sens.add(s));
-$('#fieldmode').value = state.fieldMode; $('#edgemode').value = state.edgeMode;
+$('#fieldmode').value = state.fieldMode; $('#edgemode').value = state.edgeMode; $('#deprecated').checked = state.showDeprecated;
 $('#layoutmode').addEventListener('change', (e) => { state.layout = e.target.value; rebuild(true); });
 $('#edgemode').addEventListener('change', (e) => { state.edgeMode = e.target.value; rebuild(true); });
 
@@ -167,18 +171,29 @@ $('#sens').innerHTML = SENS.concat(['None']).map((s) => `<label class="row"><inp
 $('#kinds').addEventListener('change', (e) => { const k = e.target.dataset.kind; e.target.checked ? state.kinds.add(k) : state.kinds.delete(k); rebuild(true); });
 $('#sens').addEventListener('change', (e) => { const k = e.target.dataset.sens; e.target.checked ? state.sens.add(k) : state.sens.delete(k); rebuild(true); });
 $('#fieldmode').addEventListener('change', (e) => { state.fieldMode = e.target.value; rebuild(true); });
-const depCount = ents.filter((e) => e.deprecated).length;
-if (!depCount) $('#deprow').style.display = 'none'; else $('#depn').textContent = depCount;
+const depEnts = ents.filter((e) => e.deprecated).length, depRels = drawnRels.filter((r) => r.deprecated).length;
+if (!depEnts && !depRels) $('#deprow').style.display = 'none';
+else $('#depn').textContent = [depEnts && `${depEnts} ${depEnts === 1 ? 'table' : 'tables'}`, depRels && `${depRels} ${depRels === 1 ? 'relationship' : 'relationships'}`].filter(Boolean).join(' · ');
 $('#deprecated').addEventListener('change', (e) => { state.showDeprecated = e.target.checked; rebuild(true); });
 $('#isolated').addEventListener('change', (e) => { state.showIsolated = e.target.checked; rebuild(true); });
 $('#focusbtn').addEventListener('click', () => { if (state.selected) { state.focus = { id: state.selected, hops: +$('#hops').value }; rebuild(true); } });
 $('#showall').addEventListener('click', () => { state.focus = null; rebuild(true); });
 
+// A selected (or focus-root) entity always shows its own deprecated lines, so selecting one can change the
+// relationship count in the status line.
+const touchesRoot = (r) => [state.selected, state.focus?.id].some((id) => id && (r.from === id || r.to === id));
+const edgeShown = (r) => state.showDeprecated || !r.deprecated || touchesRoot(r);
+// Focus hops skip deprecated relationships and deprecated tables (so a path never runs through a hidden table) unless the box is ticked.
+function hopNbrs(id) {
+  if (state.showDeprecated) return nbrs.get(id) || [];
+  return [...(nbrs.get(id) || [])].filter((n) => !byId.get(n).deprecated || n === state.focus.id).filter((n) => relsOf.get(id).some((r) => (r.from === n || r.to === n) && (!r.deprecated || r.from === state.focus.id || r.to === state.focus.id)));
+}
+const sceneSig = () => [...visibleSet()].join();
 function visibleSet() {
   let ids = new Set();
   if (state.focus) {
     let frontier = new Set([state.focus.id]); ids = new Set(frontier);
-    for (let i = 0; i < state.focus.hops; i++) { const nx = new Set(); frontier.forEach((id) => nbrs.get(id)?.forEach((n) => { if (!ids.has(n)) nx.add(n); })); nx.forEach((n) => ids.add(n)); frontier = nx; }
+    for (let i = 0; i < state.focus.hops; i++) { const nx = new Set(); frontier.forEach((id) => hopNbrs(id).forEach((n) => { if (!ids.has(n)) nx.add(n); })); nx.forEach((n) => ids.add(n)); frontier = nx; }
   } else ents.forEach((e) => ids.add(e.id));
   return new Set([...ids].filter((id) => {
     const e = byId.get(id);
@@ -187,8 +202,8 @@ function visibleSet() {
       if (e.group && allGroups.includes(e.group) && !state.groups.has(e.group)) return false;
       const s = sensOf(e); if (!(s.length ? s.some((x) => state.sens.has(x)) : state.sens.has('None'))) return false;
     }
-    if (!state.showDeprecated && e.deprecated && id !== state.selected) return false;
-    if (!state.showIsolated && !state.focus && !e.isLookup && dnbrs.get(id).size === 0) return false;
+    if (!state.showDeprecated && e.deprecated && id !== state.selected && id !== state.focus?.id) return false;
+    if (!state.showIsolated && !state.focus && !e.isLookup && (state.showDeprecated ? dnbrs : liveNbrs).get(id).size === 0) return false;
     return true;
   }));
 }
@@ -239,11 +254,15 @@ function sizeNode(e) {
 /* ---------- rendering ---------- */
 const svg = $('#svg'), vp = $('#vp');
 let scene = null; // {nodes:Map, edgeEls, nodeEls, bounds}
+function updateStatus() {
+  const lk = rels.length - drawnRels.length, shown = scene.edges.filter(edgeShown).length;
+  $('#status').textContent = `${scene.nodes.length} of ${ents.length} entities · ${shown} of ${drawnRels.length} relationships` + (lk ? ` · ${lk} lookup references marked in tables` : '') + (state.focus ? ` · focus: ${byId.get(state.focus.id).table} (${state.focus.hops} hop${state.focus.hops > 1 ? 's' : ''})` : '');
+}
 function rebuild(refit) {
   const vis = visibleSet();
   if (state.selected && !vis.has(state.selected)) state.selected = null;
   const nodes = ents.filter((e) => vis.has(e.id)).map((e) => ({ id: e.id, e, kind: kindOf(e), group: e.group, ...sizeNode(e), x: 0, y: 0 }));
-  const edges = drawnRels.filter((r) => vis.has(r.from) && vis.has(r.to));
+  const edges = drawnRels.filter((r) => vis.has(r.from) && vis.has(r.to)); // hidden deprecated lines stay in the layout; restyle() shows or hides them
   // A small focus view reads better without group frames, so it uses the compact layout.
   const mode = state.layout === 'compact' || (state.focus && nodes.length <= 6) ? 'compact' : 'grouped';
   const hidden = state.edgeMode === 'selected'; // lines show only for the selection, so the gutters can stay tight
@@ -252,8 +271,7 @@ function rebuild(refit) {
   const nmap = new Map(nodes.map((n) => [n.id, n]));
   out.lazy = hidden;
   draw(nodes, edges, nmap, out);
-  const lk = rels.length - drawnRels.length;
-  $('#status').textContent = `${nodes.length} of ${ents.length} entities · ${edges.length} of ${drawnRels.length} relationships` + (lk ? ` · ${lk} lookup references marked in tables` : '') + (state.focus ? ` · focus: ${byId.get(state.focus.id).table} (${state.focus.hops} hop${state.focus.hops > 1 ? 's' : ''})` : '');
+  updateStatus();
   if (refit) fit(); else applyTransform();
   restyle(); renderMini(); renderDetail();
 }
@@ -296,7 +314,7 @@ function drawEdges(list, paths) {
 function syncEdges() {
   if (!scene.lazy) return;
   const sel = state.selected, hasMatch = state.matches.size > 0;
-  const ids = scene.edges.filter((e) => (sel && (e.from === sel || e.to === sel)) || (hasMatch && (state.matches.has(e.from) || state.matches.has(e.to)))).map((e) => e.id);
+  const ids = scene.edges.filter((e) => edgeShown(e) && ((sel && (e.from === sel || e.to === sel)) || (hasMatch && (state.matches.has(e.from) || state.matches.has(e.to))))).map((e) => e.id);
   const key = ids.join(',');
   if (key === scene.drawnKey) return;
   scene.drawnKey = key;
@@ -387,7 +405,7 @@ function bounds(nodes) {
 /* ---------- highlight / dim ---------- */
 function restyle() {
   if (!scene) return;
-  syncEdges();
+  syncEdges(); updateStatus();
   const sel = state.selected, hasMatch = state.matches.size > 0;
   const near = sel ? new Set([sel, ...nbrs.get(sel)]) : null;
   for (const [id, o] of scene.nodeEls) {
@@ -402,7 +420,7 @@ function restyle() {
     const hit = sel && (o.e.from === sel || o.e.to === sel);
     const on = sel ? hit : true;
     const matched = hasMatch && (state.matches.has(o.e.from) || state.matches.has(o.e.to));
-    const hideAll = state.edgeMode === 'selected' && !sel && !matched;
+    const hideAll = !edgeShown(o.e) || (state.edgeMode === 'selected' && !sel && !matched);
     o.g.setAttribute('display', hideAll ? 'none' : '');
     o.g.setAttribute('opacity', sel ? (hit ? 1 : 0.06) : hasMatch ? (matched ? 0.9 : 0.1) : 0.55);
     o.line.setAttribute('stroke', hit ? css('--hl') : css('--edge')); o.line.setAttribute('stroke-width', hit ? 2.2 : 1.3);
@@ -477,8 +495,13 @@ mini.addEventListener('pointerdown', (e) => {
 });
 
 /* ---------- selection / detail ---------- */
+// Selection reveals a deprecated entity, which needs a rebuild. Its deprecated lines are only shown or hidden
+// (the layout always routes them), so selecting a live table never moves the diagram.
 function select(id) {
-  state.selected = id; restyle(); renderDetail();
+  const before = !state.showDeprecated && state.selected !== id ? sceneSig() : null;
+  state.selected = id;
+  if (before !== null && sceneSig() !== before) { rebuild(false); return; }
+  restyle(); renderDetail();
 }
 function renderDetail() {
   const d = $('#detail'), id = state.selected;
