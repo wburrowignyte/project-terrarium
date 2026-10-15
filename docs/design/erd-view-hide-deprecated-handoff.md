@@ -165,3 +165,38 @@ the tests again. Then push.
 
 _Build agent: fill in below. Record commits, any decisions this spec left open, deviations from it, the
 verification results table, and any known limits._
+
+### Commits
+1. `erd-view: hide deprecated tables and relationships by default` (template.html)
+2. `erd-view: test relationship deprecation parse`
+3. `Document deprecated-hidden default; bump to 0.6.1`
+4. `erd-view: re-render on selection change when it affects deprecated items` (deviation, below)
+
+### Decisions and deviations
+- **Deviation (bug found in verification):** `select()` only restyled, so deselecting a deprecated table left it on
+  screen (check 4 failed). `select()` now calls `rebuild(false)` when deprecated items are hidden and the old or
+  new selection is a deprecated table or has a deprecated drawn relationship. Cost: a relayout on those
+  selections only.
+- `relVisible(r, vis)` also requires both endpoints in `vis`, so it fully replaces the old filter at `rebuild()`.
+- Focus root is exempt from the deprecated-entity filter (spec 2e).
+- `liveNbrs` is built after `byId` exists (needed to test endpoint deprecation).
+- README per-feature version table (`v0.2` for ERD view) left unchanged; only `plugin.json` bumped to 0.6.1.
+  `skills/erd-view/SKILL.md` has a filter tips list, so the same sentence was added there.
+- `#deprecated` is synced from `state.showDeprecated` next to `#fieldmode`/`#edgemode`.
+
+### Verification (fixture in scratch: E-10 deprecated; R-17 and R-10 deprecated; E-12's only link is R-10)
+| # | Result |
+|---|---|
+| 1 | Pass. Unchecked; `#depn` = `1 table · 2 relationships`; 13 of 14 entities, 15 of 18 relationships |
+| 2 | Pass. Unticking "no relationships" hides E-12 (12 of 14) |
+| 3 | Pass. 14 of 14, 18 of 18, dashed edges drawn; same as the old build of the same file |
+| 4 | Pass after fix. Search selects E-10 (14 / 16 relationships, dashed); clicking empty canvas returns to 13 / 15 |
+| 5 | Pass. Focus on CCA_PROVIDER, 1 hop: 3 entities (license type hidden); ticking the box gives 4 |
+| 6 | Pass. Baseline fixture: `#deprow` hidden, 14 of 14, 18 of 18 |
+| 7 | Pass. `gen-large.mjs` output renders 150 of 150, 258 of 258, no console errors |
+
+Screenshots: `docs/design/erd-view-hide-deprecated/` (`before.png` = old build, `after-unchecked.png`, `after-checked.png`).
+`node --test "tools/*/test/*.test.mjs"`: 55 pass.
+
+### Known limits
+- Selecting or deselecting a deprecated table triggers a relayout, so nodes may shift slightly.
