@@ -85,7 +85,9 @@ test('deprecation and change log are parsed', () => {
   assert.equal(m.entities.find((e) => e.id === 'E-2').deprecated, '');
   // A relationship whose description starts with "Deprecated" is flagged; others are not.
   const base = readFileSync(fileURLToPath(new URL('../../../examples/fixtures/baseline/ERD.md', import.meta.url)), 'utf8');
-  const dr = parseErd(base.replace('| A household submits many applications |', '| Deprecated in v2: replaced by R-2 |'));
+  const edited = base.replace('| A household submits many applications |', '| Deprecated in v2: replaced by R-2 |');
+  assert.notEqual(edited, base);
+  const dr = parseErd(edited);
   assert.equal(dr.relationships.find((r) => r.id === 'R-1').deprecated, true);
   assert.equal(dr.relationships.find((r) => r.id === 'R-2').deprecated, false);
 });

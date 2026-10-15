@@ -173,18 +173,22 @@ verification results table, and any known limits._
 4. `erd-view: re-render on selection change when it affects deprecated items` (deviation, below)
 
 ### Decisions and deviations
-- **Deviation (bug found in verification):** `select()` only restyled, so deselecting a deprecated table left it on
-  screen (check 4 failed). `select()` now calls `rebuild(false)` when deprecated items are hidden and the old or
-  new selection is a deprecated table or has a deprecated drawn relationship. Cost: a relayout on those
-  selections only.
-- `relVisible(r, vis)` also requires both endpoints in `vis`, so it fully replaces the old filter at `rebuild()`.
+- **Deviation (bug found in verification, reworked after review):** `select()` only restyled, so deselecting a
+  deprecated table left it on screen. `select()` now rebuilds only when the *visible table set* changes (i.e. a
+  deprecated table is revealed or hidden). Deprecated relationships are always routed by the layout and only
+  shown or hidden in `restyle()` (`edgeShown`), so selecting a live table never moves the diagram or breaks
+  double-click zoom. Consequence: hidden deprecated lines still reserve routing space between visible tables.
+  Selecting a table intentionally changes the relationship count in the status line (spec 2b).
+- Focus hops skip deprecated relationships (`hopNbrs`) unless the box is ticked, except those of the focus root,
+  whose own deprecated lines draw (the root is exempt like the selection).
+- The spec's `relVisible(r, vis)` became `edgeShown(r)`, applied in `restyle()`/`updateStatus()` rather than in the `rebuild()` filter (see deviation).
 - Focus root is exempt from the deprecated-entity filter (spec 2e).
 - `liveNbrs` is built after `byId` exists (needed to test endpoint deprecation).
 - README per-feature version table (`v0.2` for ERD view) left unchanged; only `plugin.json` bumped to 0.6.1.
   `skills/erd-view/SKILL.md` has a filter tips list, so the same sentence was added there.
 - `#deprecated` is synced from `state.showDeprecated` next to `#fieldmode`/`#edgemode`.
 
-### Verification (fixture in scratch: E-10 deprecated; R-17 and R-10 deprecated; E-12's only link is R-10)
+### Verification (fixture in scratch; reproduce from `examples/fixtures/baseline/ERD.md` by adding `- **Status:** Deprecated in v2: merged into CCA_PROVIDER [S1]` after E-10's Sensitivity line, and starting the descriptions of R-10 and R-17 with `Deprecated in v2: `; E-10 deprecated; R-17 and R-10 deprecated; E-12's only link is R-10)
 | # | Result |
 |---|---|
 | 1 | Pass. Unchecked; `#depn` = `1 table · 2 relationships`; 13 of 14 entities, 15 of 18 relationships |
@@ -199,4 +203,5 @@ Screenshots: `docs/design/erd-view-hide-deprecated/` (`before.png` = old build, 
 `node --test "tools/*/test/*.test.mjs"`: 55 pass.
 
 ### Known limits
-- Selecting or deselecting a deprecated table triggers a relayout, so nodes may shift slightly.
+- Selecting or deselecting a deprecated table (which adds or removes a table) triggers a relayout.
+- Pointer capture on the svg retargets `pointerup` in Playwright's synthetic mouse, so node clicks were exercised by dispatching `pointerup`/`dblclick` on the node (the old build behaves the same under synthetic mouse).

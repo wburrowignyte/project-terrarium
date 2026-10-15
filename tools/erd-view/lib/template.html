@@ -179,15 +179,21 @@ $('#isolated').addEventListener('change', (e) => { state.showIsolated = e.target
 $('#focusbtn').addEventListener('click', () => { if (state.selected) { state.focus = { id: state.selected, hops: +$('#hops').value }; rebuild(true); } });
 $('#showall').addEventListener('click', () => { state.focus = null; rebuild(true); });
 
-function relVisible(r, vis) {
-  if (!vis.has(r.from) || !vis.has(r.to)) return false;
-  return state.showDeprecated || !r.deprecated || r.from === state.selected || r.to === state.selected;
+// A selected (or focus-root) entity always shows its own deprecated lines, so selecting one can change the
+// relationship count in the status line.
+const touchesRoot = (r) => [state.selected, state.focus?.id].some((id) => id && (r.from === id || r.to === id));
+const edgeShown = (r) => state.showDeprecated || !r.deprecated || touchesRoot(r);
+// Focus hops skip deprecated relationships (and the deprecated neighbours they lead to) unless the box is ticked.
+function hopNbrs(id) {
+  if (state.showDeprecated) return nbrs.get(id) || [];
+  return [...(nbrs.get(id) || [])].filter((n) => relsOf.get(id).some((r) => (r.from === n || r.to === n) && (!r.deprecated || r.from === state.focus.id || r.to === state.focus.id)));
 }
+const sceneSig = () => [...visibleSet()].join();
 function visibleSet() {
   let ids = new Set();
   if (state.focus) {
     let frontier = new Set([state.focus.id]); ids = new Set(frontier);
-    for (let i = 0; i < state.focus.hops; i++) { const nx = new Set(); frontier.forEach((id) => nbrs.get(id)?.forEach((n) => { if (!ids.has(n)) nx.add(n); })); nx.forEach((n) => ids.add(n)); frontier = nx; }
+    for (let i = 0; i < state.focus.hops; i++) { const nx = new Set(); frontier.forEach((id) => hopNbrs(id).forEach((n) => { if (!ids.has(n)) nx.add(n); })); nx.forEach((n) => ids.add(n)); frontier = nx; }
   } else ents.forEach((e) => ids.add(e.id));
   return new Set([...ids].filter((id) => {
     const e = byId.get(id);
@@ -248,11 +254,15 @@ function sizeNode(e) {
 /* ---------- rendering ---------- */
 const svg = $('#svg'), vp = $('#vp');
 let scene = null; // {nodes:Map, edgeEls, nodeEls, bounds}
+function updateStatus() {
+  const lk = rels.length - drawnRels.length, shown = scene.edges.filter(edgeShown).length;
+  $('#status').textContent = `${scene.nodes.length} of ${ents.length} entities · ${shown} of ${drawnRels.length} relationships` + (lk ? ` · ${lk} lookup references marked in tables` : '') + (state.focus ? ` · focus: ${byId.get(state.focus.id).table} (${state.focus.hops} hop${state.focus.hops > 1 ? 's' : ''})` : '');
+}
 function rebuild(refit) {
   const vis = visibleSet();
   if (state.selected && !vis.has(state.selected)) state.selected = null;
   const nodes = ents.filter((e) => vis.has(e.id)).map((e) => ({ id: e.id, e, kind: kindOf(e), group: e.group, ...sizeNode(e), x: 0, y: 0 }));
-  const edges = drawnRels.filter((r) => relVisible(r, vis));
+  const edges = drawnRels.filter((r) => vis.has(r.from) && vis.has(r.to)); // hidden deprecated lines stay in the layout; restyle() shows or hides them
   // A small focus view reads better without group frames, so it uses the compact layout.
   const mode = state.layout === 'compact' || (state.focus && nodes.length <= 6) ? 'compact' : 'grouped';
   const hidden = state.edgeMode === 'selected'; // lines show only for the selection, so the gutters can stay tight
@@ -261,8 +271,7 @@ function rebuild(refit) {
   const nmap = new Map(nodes.map((n) => [n.id, n]));
   out.lazy = hidden;
   draw(nodes, edges, nmap, out);
-  const lk = rels.length - drawnRels.length;
-  $('#status').textContent = `${nodes.length} of ${ents.length} entities · ${edges.length} of ${drawnRels.length} relationships` + (lk ? ` · ${lk} lookup references marked in tables` : '') + (state.focus ? ` · focus: ${byId.get(state.focus.id).table} (${state.focus.hops} hop${state.focus.hops > 1 ? 's' : ''})` : '');
+  updateStatus();
   if (refit) fit(); else applyTransform();
   restyle(); renderMini(); renderDetail();
 }
@@ -305,7 +314,7 @@ function drawEdges(list, paths) {
 function syncEdges() {
   if (!scene.lazy) return;
   const sel = state.selected, hasMatch = state.matches.size > 0;
-  const ids = scene.edges.filter((e) => (sel && (e.from === sel || e.to === sel)) || (hasMatch && (state.matches.has(e.from) || state.matches.has(e.to)))).map((e) => e.id);
+  const ids = scene.edges.filter((e) => edgeShown(e) && (sel && (e.from === sel || e.to === sel)) || (hasMatch && (state.matches.has(e.from) || state.matches.has(e.to)))).map((e) => e.id);
   const key = ids.join(',');
   if (key === scene.drawnKey) return;
   scene.drawnKey = key;
@@ -396,7 +405,7 @@ function bounds(nodes) {
 /* ---------- highlight / dim ---------- */
 function restyle() {
   if (!scene) return;
-  syncEdges();
+  syncEdges(); updateStatus();
   const sel = state.selected, hasMatch = state.matches.size > 0;
   const near = sel ? new Set([sel, ...nbrs.get(sel)]) : null;
   for (const [id, o] of scene.nodeEls) {
@@ -411,7 +420,7 @@ function restyle() {
     const hit = sel && (o.e.from === sel || o.e.to === sel);
     const on = sel ? hit : true;
     const matched = hasMatch && (state.matches.has(o.e.from) || state.matches.has(o.e.to));
-    const hideAll = state.edgeMode === 'selected' && !sel && !matched;
+    const hideAll = !edgeShown(o.e) || (state.edgeMode === 'selected' && !sel && !matched);
     o.g.setAttribute('display', hideAll ? 'none' : '');
     o.g.setAttribute('opacity', sel ? (hit ? 1 : 0.06) : hasMatch ? (matched ? 0.9 : 0.1) : 0.55);
     o.line.setAttribute('stroke', hit ? css('--hl') : css('--edge')); o.line.setAttribute('stroke-width', hit ? 2.2 : 1.3);
@@ -486,12 +495,12 @@ mini.addEventListener('pointerdown', (e) => {
 });
 
 /* ---------- selection / detail ---------- */
-// Selection reveals a deprecated entity and its deprecated lines, so it can change what is drawn.
-const revealsDeprecated = (id) => !!id && (!!byId.get(id).deprecated || relsOf.get(id).some((r) => !r.lookup && r.deprecated));
+// Selection reveals a deprecated entity, which needs a rebuild. Its deprecated lines are only shown or hidden
+// (the layout always routes them), so selecting a live table never moves the diagram.
 function select(id) {
-  const prev = state.selected;
+  const before = !state.showDeprecated && state.selected !== id ? sceneSig() : null;
   state.selected = id;
-  if (!state.showDeprecated && prev !== id && (revealsDeprecated(prev) || revealsDeprecated(id))) { rebuild(false); return; }
+  if (before !== null && sceneSig() !== before) { rebuild(false); return; }
   restyle(); renderDetail();
 }
 function renderDetail() {
