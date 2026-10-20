@@ -76,6 +76,7 @@ filters by kind, group and sensitivity, an N-hop focus mode, a detail panel with
   table, with a small hop where two cross.
 - **Shared lookup.** `<PREFIX>_LOOKUP` gets no connector lines. Each field that points at it carries an amber `LK`
   chip and its `LOOKUP_TYPE`; selecting the lookup table highlights every table that uses it.
+- **Deprecated items.** Deprecated tables and relationships are hidden by default; **Show deprecated** in the side panel reveals them, dashed.
 - On models with more than 80 relationships the connectors show for the selected table only, which keeps the
   diagram compact.
 
