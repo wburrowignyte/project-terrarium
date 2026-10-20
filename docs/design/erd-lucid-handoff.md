@@ -149,7 +149,7 @@ column's record-field name (camelCase), so a field added in Lucid gets its camel
 
 On pull, any child end in `many | oneOrMany | zeroOrMany` means `many-to-one`. Any other end means `one-to-one`.
 Parent-end changes that only flip optionality are reported as a `modify-field` op on the FK's Req, not as a
-cardinality change. Label = the relationship's Description, cut to 40 characters (display only; not read back).
+cardinality change. New lines are drawn without a label; the relationship Description stays in ERD.md only. Lines already drawn keep any existing label text: the tool neither clears nor reads it back (whether `updateRelationship` with an absent `label` preserves or clears it is unverified).
 
 ---
 
@@ -362,7 +362,7 @@ Run 2026-10-20 in `project-terrarium sync test (delete me)` (root folder, user-a
 | # | Answer |
 |---|---|
 | S1 | **Empty doc:** `lucid_create_erd` with one placeholder entity (`SEED`), then delete it from a script (`basecanvasediting.deleteItem`). Simpler than a diagram-specification text block and needs no `lucid://skills/diagram-specification` read. `erds.createSchema` also works (positions honoured, `entityIdsByKey` returned), but the tool uses `erds.create` per entity instead (see Decisions): it is idempotent per `ERD_ID` and stamps shape data in the same call. |
-| S2 | **Yes.** `formulas.addShapeDataField` works on relationship lines (`lineId`), and the value survives `updateRelationship` (cardinality and label edits). Relationships are identified by `ERD_ID = R-n`, with the (parent, child, FK column) signature as the fallback for lines without one. |
+| S2 | **Yes.** `formulas.addShapeDataField` works on relationship lines (`lineId`), and the value survives `updateRelationship` (cardinality edits). Relationships are identified by `ERD_ID = R-n`, with the (parent, child, FK column) signature as the fallback for lines without one. |
 | S3 | Entity shape data **survives** `addField`, `moveField`, rename through `erds.update`. **Copy/paste duplicates the data**: `copyPasteItems` produced a second ERD entity carrying `ERD_ID = E-1`, so duplicate detection is required (§6b rule implemented: the shape that best matches the baseline keeps the id, the rest are new tables). |
 | S4 | 10 entities ×15 fields + 9 lines: 0.85 s. 25 + 24: 1.4 s. 50 + 49: 2.4 s (`createSchema`), stamping 50 entities 21 ms, reading 50 entities 17 ms. Roughly 45 ms per entity, so the 25 s limit is nowhere near at 40 ops per batch; the default batch is **40 ops** (about 2 s, a >10x margin). No source-size limit was hit (a 16 KB script ran). A full snapshot of ~50 entities takes <100 ms, so the snapshot script needs no paging. |
 | S5 | `wrapInContainer({className: 'SparkFrameBlock', label})` works. Entities inside the frame stay readable by `erds.list/read`, and relationships and shape data are unaffected. The frame is stamped with `ERD_ID = F:<group>` so later pushes find it. |

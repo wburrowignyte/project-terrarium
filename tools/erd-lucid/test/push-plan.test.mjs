@@ -220,7 +220,8 @@ test('large model (150 entities): batch count, and no two tables closer than 160
     min = Math.min(min, Math.max(gx, gy));
   }
   assert.ok(min >= 160, `closest gap is ${min}px`);
-  assert.ok(allOps(plan).every((o) => o.op !== 'create-rel' || !o.label || o.label.length <= 40));
+  assert.ok(allOps(plan).every((o) => !('label' in o)), 'no op carries a label');
+  assert.ok(allOps(plan).some((o) => o.op === 'create-rel'));
 });
 
 test('CLI: init, first push, record, then a matching incremental push', () => {
@@ -267,6 +268,25 @@ test('a line whose primary end drifted off the PK row is pinned back, and the ru
   assert.deepEqual([o.id, o.primaryColumn, o.foreignColumn], ['R-9', 'ID', 'PROVIDER_ID']);
   const src = batchScript(plan.batches[0], 't');
   assert.match(src, /rerouteLines[\s\S]*updateRelationship\(r\.lineId, \{ primaryFieldIndex: p\[0\]/, 'pins are restored after rerouteLines');
+});
+
+test('push plan: no relationship op carries a label', () => {
+  const n = normalizeErd(baselineMd);
+  assert.ok(baselineMd.includes('A county has many providers'), 'fixture relationships have a Description');
+  const first = allOps(firstPush(n, opts)).filter((o) => o.op === 'create-rel');
+  assert.ok(first.length > 0 && first.every((o) => !('label' in o)));
+  const md = mdEdit(baselineMd, '| R-6 |', (l) => l.replace('one-to-one', 'many-to-one'));
+  const plan = incrementalPush(normalizeErd(md), stateFor(baselineMd), snapshotFor(baselineMd), opts);
+  const upd = allOps(plan).filter((o) => o.op === 'update-rel');
+  assert.ok(upd.length > 0 && upd.every((o) => !('label' in o)));
+});
+
+test('generated script never passes label to createRelationship/updateRelationship', () => {
+  const ops = allOps(firstPush(normalizeErd(baselineMd), opts));
+  const src = batchScript(ops, 't');
+  assert.match(src, /createRelationship|updateRelationship/);
+  assert.ok(!/(createRelationship|updateRelationship)\([^;]*label/.test(src));
+  assert.ok(!/\bo\.label\b/.test(src), 'the relationship spec reads no label from the op');
 });
 
 test('the runtime never hands Lucid text that starts with "=" (it would be read as a formula)', async () => {

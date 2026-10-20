@@ -76,7 +76,7 @@ const pinRel = (o, lineId) => {
   if (!p || !c) throw new Error(o.id + ': entity not found (' + (p ? o.foreign : o.primary) + ')');
   const pi = erds.read(p).fields.findIndex((f) => f.name === o.primaryColumn) + 1, ci = erds.read(c).fields.findIndex((f) => f.name === o.foreignColumn) + 1;
   if (!pi || !ci) throw new Error(o.id + ': column not found (' + (pi ? o.foreignColumn : o.primaryColumn) + ')');
-  const spec = { primaryFieldIndex: pi, foreignFieldIndex: ci, primaryCardinality: o.pc, foreignCardinality: o.fc, label: clean(o.label) };
+  const spec = { primaryFieldIndex: pi, foreignFieldIndex: ci, primaryCardinality: o.pc, foreignCardinality: o.fc };
   if (lineId) return erds.updateRelationship(lineId, spec);
   return erds.createRelationship({ primaryEntityId: p, foreignEntityId: c, ...spec });
 };
