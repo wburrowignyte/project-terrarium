@@ -1,0 +1,1151 @@
+{
+ "takenAt": "2026-10-20T12:00:00.000Z",
+ "entities": [
+  {
+   "lucidId": "L-E-1",
+   "name": "CCA_HOUSEHOLD",
+   "boundingBox": {
+    "x": 0,
+    "y": 0,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-1",
+    "Kind": "Core",
+    "Group": "CCA Household",
+    "Sensitivity": "PII",
+    "Purpose": "The family unit applying for assistance (one per application)"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "COUNTY_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 3,
+     "name": "CREATED_AT",
+     "key": "",
+     "type": "Date and Time NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 4,
+     "name": "CREATED_BY",
+     "key": "",
+     "type": "User NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-E-2",
+   "name": "CCA_HOUSEHOLD_MEMBER",
+   "boundingBox": {
+    "x": 700,
+    "y": 0,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-2",
+    "Kind": "Core",
+    "Group": "CCA Household",
+    "Sensitivity": "PII",
+    "Purpose": "A person in the household; the applicant is a member"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "HOUSEHOLD_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 3,
+     "name": "FULL_NAME",
+     "key": "",
+     "type": "Text(100) NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 4,
+     "name": "DATE_OF_BIRTH",
+     "key": "",
+     "type": "Date NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 5,
+     "name": "RELATIONSHIP_TO_APPLICANT",
+     "key": "",
+     "type": "Text(30) NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 6,
+     "name": "IS_APPLICANT",
+     "key": "",
+     "type": "Boolean NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 7,
+     "name": "PREFERRED_NAME",
+     "key": "",
+     "type": "Text(60)",
+     "nullable": true
+    },
+    {
+     "index": 8,
+     "name": "SSN",
+     "key": "",
+     "type": "Text(11)",
+     "nullable": true
+    },
+    {
+     "index": 9,
+     "name": "CREATED_AT",
+     "key": "",
+     "type": "Date and Time NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 10,
+     "name": "CREATED_BY",
+     "key": "",
+     "type": "User NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-E-3",
+   "name": "CCA_APPLICATION",
+   "boundingBox": {
+    "x": 1400,
+    "y": 0,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-3",
+    "Kind": "Core",
+    "Group": "CCA Household",
+    "Sensitivity": "PII",
+    "Purpose": "A request for assistance submitted by a household"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "HOUSEHOLD_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 3,
+     "name": "COUNTY_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 4,
+     "name": "ASSIGNED_WORKER_ID",
+     "key": "",
+     "type": "User",
+     "nullable": true
+    },
+    {
+     "index": 5,
+     "name": "APPLICATION_STATUS_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 6,
+     "name": "SUBMITTED_DATE",
+     "key": "",
+     "type": "Date NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 7,
+     "name": "CREATED_AT",
+     "key": "",
+     "type": "Date and Time NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 8,
+     "name": "CREATED_BY",
+     "key": "",
+     "type": "User NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-E-4",
+   "name": "CCA_APPLICATION_STATUS",
+   "boundingBox": {
+    "x": 2100,
+    "y": 0,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-4",
+    "Kind": "Reference",
+    "Group": "CCA Household",
+    "Sensitivity": "None",
+    "Purpose": "Application lifecycle statuses"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "NAME",
+     "key": "AK",
+     "type": "Text(30) NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-E-5",
+   "name": "CCA_INCOME",
+   "boundingBox": {
+    "x": 2800,
+    "y": 0,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-5",
+    "Kind": "Core",
+    "Group": "CCA Household",
+    "Sensitivity": "PII",
+    "Purpose": "Monthly income of a household member by source"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "HOUSEHOLD_MEMBER_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 3,
+     "name": "INCOME_SOURCE_TYPE_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 4,
+     "name": "MONTHLY_AMOUNT",
+     "key": "",
+     "type": "Decimal NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 5,
+     "name": "VERIFICATION_DOCUMENT",
+     "key": "",
+     "type": "Document",
+     "nullable": true
+    },
+    {
+     "index": 6,
+     "name": "CREATED_AT",
+     "key": "",
+     "type": "Date and Time NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 7,
+     "name": "CREATED_BY",
+     "key": "",
+     "type": "User NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-E-6",
+   "name": "CCA_INCOME_SOURCE_TYPE",
+   "boundingBox": {
+    "x": 0,
+    "y": 500,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-6",
+    "Kind": "Reference",
+    "Group": "CCA Household",
+    "Sensitivity": "None",
+    "Purpose": "Categories of income"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "NAME",
+     "key": "AK",
+     "type": "Text(30) NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-E-7",
+   "name": "CCA_CASE",
+   "boundingBox": {
+    "x": 700,
+    "y": 500,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-7",
+    "Kind": "Core",
+    "Group": "CCA Household",
+    "Sensitivity": "PII",
+    "Purpose": "An approved, ongoing assistance authorization for a household"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "APPLICATION_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 3,
+     "name": "HOUSEHOLD_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 4,
+     "name": "COUNTY_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 5,
+     "name": "CASE_NUMBER",
+     "key": "AK",
+     "type": "Text(20) NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 6,
+     "name": "CREATED_AT",
+     "key": "",
+     "type": "Date and Time NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 7,
+     "name": "CREATED_BY",
+     "key": "",
+     "type": "User NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-E-8",
+   "name": "CCA_CHILD",
+   "boundingBox": {
+    "x": 1400,
+    "y": 500,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-8",
+    "Kind": "Core",
+    "Group": "CCA Household",
+    "Sensitivity": "PII",
+    "Purpose": "A household member for whom care is requested"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "CASE_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 3,
+     "name": "HOUSEHOLD_MEMBER_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 4,
+     "name": "CREATED_AT",
+     "key": "",
+     "type": "Date and Time NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 5,
+     "name": "CREATED_BY",
+     "key": "",
+     "type": "User NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-E-9",
+   "name": "CCA_PROVIDER",
+   "boundingBox": {
+    "x": 2100,
+    "y": 500,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-9",
+    "Kind": "Core",
+    "Group": "CCA Provider",
+    "Sensitivity": "PII",
+    "Purpose": "A child care provider. A provider serves many children"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "NAME",
+     "key": "",
+     "type": "Text(100) NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 3,
+     "name": "LICENSE_NUMBER",
+     "key": "",
+     "type": "Text(30) NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 4,
+     "name": "PROVIDER_LICENSE_TYPE_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 5,
+     "name": "ADDRESS",
+     "key": "",
+     "type": "Text(200) NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 6,
+     "name": "COUNTY_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 7,
+     "name": "CREATED_AT",
+     "key": "",
+     "type": "Date and Time NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 8,
+     "name": "CREATED_BY",
+     "key": "",
+     "type": "User NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-E-10",
+   "name": "CCA_PROVIDER_LICENSE_TYPE",
+   "boundingBox": {
+    "x": 2800,
+    "y": 500,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-10",
+    "Kind": "Core",
+    "Group": "CCA Provider",
+    "Sensitivity": "None",
+    "Purpose": "Provider license types"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "NAME",
+     "key": "AK",
+     "type": "Text(40) NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-E-11",
+   "name": "CCA_AUTHORIZATION",
+   "boundingBox": {
+    "x": 0,
+    "y": 1000,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-11",
+    "Kind": "Core",
+    "Group": "CCA Provider",
+    "Sensitivity": "PII",
+    "Purpose": "Approval for a child to receive care from a provider for a date range and weekly hours. A child may hold concurrent authorizations with several providers"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "CHILD_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 3,
+     "name": "PROVIDER_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 4,
+     "name": "START_DATE",
+     "key": "",
+     "type": "Date NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 5,
+     "name": "END_DATE",
+     "key": "",
+     "type": "Date",
+     "nullable": true
+    },
+    {
+     "index": 6,
+     "name": "AUTHORIZED_HOURS_PER_WEEK",
+     "key": "",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 7,
+     "name": "CREATED_AT",
+     "key": "",
+     "type": "Date and Time NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 8,
+     "name": "CREATED_BY",
+     "key": "",
+     "type": "User NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-E-12",
+   "name": "CCA_AUTHORIZATION_HISTORY",
+   "boundingBox": {
+    "x": 700,
+    "y": 1000,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-12",
+    "Kind": "History/Audit",
+    "Group": "CCA Provider",
+    "Sensitivity": "PII",
+    "Purpose": "Prior versions of an authorization, kept for auditors"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "AUTHORIZATION_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 3,
+     "name": "VERSION_NUMBER",
+     "key": "",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 4,
+     "name": "START_DATE",
+     "key": "",
+     "type": "Date NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 5,
+     "name": "END_DATE",
+     "key": "",
+     "type": "Date",
+     "nullable": true
+    },
+    {
+     "index": 6,
+     "name": "AUTHORIZED_HOURS_PER_WEEK",
+     "key": "",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 7,
+     "name": "CREATED_AT",
+     "key": "",
+     "type": "Date and Time NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 8,
+     "name": "CREATED_BY",
+     "key": "",
+     "type": "User NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-E-13",
+   "name": "CCA_CASE_NOTE",
+   "boundingBox": {
+    "x": 1400,
+    "y": 1000,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-13",
+    "Kind": "Core",
+    "Group": "CCA Household",
+    "Sensitivity": "PII",
+    "Purpose": "Free-text note a worker writes on a case; notes can be several pages"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "CASE_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 3,
+     "name": "NOTE_TEXT",
+     "key": "",
+     "type": "Extra Long Text NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 4,
+     "name": "AUTHOR_ID",
+     "key": "",
+     "type": "User NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 5,
+     "name": "CREATED_AT",
+     "key": "",
+     "type": "Date and Time NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 6,
+     "name": "CREATED_BY",
+     "key": "",
+     "type": "User NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-E-14",
+   "name": "CCA_COUNTY",
+   "boundingBox": {
+    "x": 2100,
+    "y": 1000,
+    "w": 400,
+    "h": 200
+   },
+   "shapeData": {
+    "ERD_ID": "E-14",
+    "Kind": "Reference",
+    "Group": "Shared reference",
+    "Sensitivity": "None",
+    "Purpose": "Administering counties; workers see only their county"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "NAME",
+     "key": "AK",
+     "type": "Text(50) NOT NULL",
+     "nullable": false
+    }
+   ]
+  },
+  {
+   "lucidId": "L-N1",
+   "name": "CCA_PROVIDER_CAPACITY",
+   "boundingBox": {
+    "x": 0,
+    "y": 0,
+    "w": 1,
+    "h": 1
+   },
+   "shapeData": {
+    "Kind": "Core",
+    "Group": "Provider",
+    "Purpose": "Licensed slots per provider"
+   },
+   "fields": [
+    {
+     "index": 1,
+     "name": "ID",
+     "key": "PK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 2,
+     "name": "PROVIDER_ID",
+     "key": "FK",
+     "type": "Integer NOT NULL",
+     "nullable": false
+    },
+    {
+     "index": 3,
+     "name": "LICENSED_SLOTS",
+     "key": "",
+     "type": "Integer",
+     "nullable": true
+    }
+   ]
+  }
+ ],
+ "relationships": [
+  {
+   "lineId": "LN-R-1",
+   "erdId": "R-1",
+   "primary": {
+    "entityId": "L-E-1",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-3",
+    "fieldIndex": 2,
+    "fieldName": "HOUSEHOLD_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-2",
+   "erdId": "R-2",
+   "primary": {
+    "entityId": "L-E-1",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-2",
+    "fieldIndex": 2,
+    "fieldName": "HOUSEHOLD_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-3",
+   "erdId": "R-3",
+   "primary": {
+    "entityId": "L-E-2",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-5",
+    "fieldIndex": 2,
+    "fieldName": "HOUSEHOLD_MEMBER_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-4",
+   "erdId": "R-4",
+   "primary": {
+    "entityId": "L-E-6",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-5",
+    "fieldIndex": 3,
+    "fieldName": "INCOME_SOURCE_TYPE_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-5",
+   "erdId": "R-5",
+   "primary": {
+    "entityId": "L-E-4",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-3",
+    "fieldIndex": 5,
+    "fieldName": "APPLICATION_STATUS_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-6",
+   "erdId": "R-6",
+   "primary": {
+    "entityId": "L-E-3",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-7",
+    "fieldIndex": 2,
+    "fieldName": "APPLICATION_ID",
+    "cardinality": "zeroOrOne"
+   }
+  },
+  {
+   "lineId": "LN-R-7",
+   "erdId": "R-7",
+   "primary": {
+    "entityId": "L-E-7",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-8",
+    "fieldIndex": 2,
+    "fieldName": "CASE_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-8",
+   "erdId": "R-8",
+   "primary": {
+    "entityId": "L-E-8",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-11",
+    "fieldIndex": 2,
+    "fieldName": "CHILD_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-9",
+   "erdId": "R-9",
+   "primary": {
+    "entityId": "L-E-9",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-11",
+    "fieldIndex": 3,
+    "fieldName": "PROVIDER_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-10",
+   "erdId": "R-10",
+   "primary": {
+    "entityId": "L-E-11",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-12",
+    "fieldIndex": 2,
+    "fieldName": "AUTHORIZATION_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-11",
+   "erdId": "R-11",
+   "primary": {
+    "entityId": "L-E-7",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-13",
+    "fieldIndex": 2,
+    "fieldName": "CASE_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-12",
+   "erdId": "R-12",
+   "primary": {
+    "entityId": "L-E-10",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-9",
+    "fieldIndex": 4,
+    "fieldName": "PROVIDER_LICENSE_TYPE_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-13",
+   "erdId": "R-13",
+   "primary": {
+    "entityId": "L-E-14",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-1",
+    "fieldIndex": 2,
+    "fieldName": "COUNTY_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-14",
+   "erdId": "R-14",
+   "primary": {
+    "entityId": "L-E-14",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-3",
+    "fieldIndex": 3,
+    "fieldName": "COUNTY_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-15",
+   "erdId": "R-15",
+   "primary": {
+    "entityId": "L-E-1",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-7",
+    "fieldIndex": 3,
+    "fieldName": "HOUSEHOLD_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-16",
+   "erdId": "R-16",
+   "primary": {
+    "entityId": "L-E-14",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-7",
+    "fieldIndex": 4,
+    "fieldName": "COUNTY_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-R-18",
+   "erdId": "R-18",
+   "primary": {
+    "entityId": "L-E-14",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-E-9",
+    "fieldIndex": 6,
+    "fieldName": "COUNTY_ID",
+    "cardinality": "zeroOrMany"
+   }
+  },
+  {
+   "lineId": "LN-n1",
+   "primary": {
+    "entityId": "L-E-9",
+    "fieldIndex": 1,
+    "fieldName": "ID",
+    "cardinality": "exactlyOne"
+   },
+   "foreign": {
+    "entityId": "L-N1",
+    "fieldIndex": 2,
+    "fieldName": "PROVIDER_ID",
+    "cardinality": "zeroOrMany"
+   }
+  }
+ ]
+}
