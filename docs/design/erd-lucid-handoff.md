@@ -373,6 +373,40 @@ Other things the spike found: ERD entities size themselves from `columnWidths`; 
 
 ### Commits
 
+1. `erd-lucid: record spike results` (notes only)
+2. `erd-lucid: push-plan, layout mapping, batch scripts, snapshot, 3-way pull-diff and record` (the tool, `tools/erd-lucid/`: the push and pull halves share one model module, so they went in together)
+3. `erd-lucid: tests and fixtures`
+4. `Document erd-lucid; bump to 0.7.0`
+5. a final commit with the fixes and screenshots from the live verification (below) and these notes
+
 ### Decisions and deviations
 
+- **`erds.create` per entity instead of `createSchema`.** Each op finds its entity by the `ERD_ID` shape data first, so a rerun is idempotent, and stamping happens in the same call. Lines are created in later batches by `ERD_ID` lookup, so a batch boundary can fall anywhere.
+- **State file gets a `seen` block (§5a).** `baseline` is the common ancestor for the 3-way diff and is set from `ERD.md` after a pull. After a pull that **rejected** an op, Lucid still holds the rejected edit, so a guard of "Lucid vs baseline" would refuse every later push, and §6c step 6 / §9.2.5 require the push to revert it. `seen` is the Lucid doc as it was last pulled or pushed: the guard is `snapshot vs seen`, and the push diffs `ERD.md vs the live snapshot`, so it reverts rejected edits, adopts accepted tables and repairs drift in one pass. `record --push` sets `seen = baseline`; `record --pull` sets `baseline` from `ERD.md` and `seen` from the snapshot.
+- **Push never deletes what it does not own.** A table or line in Lucid with no `ERD_ID` that `ERD.md` does not know (for example a rejected new table) is left alone with a warning. Rows on an ERD-owned table are reconciled to `ERD.md`, so a rejected row edit is reverted.
+- **Adopt rule applies to the pull as well.** An unstamped table named like an entity in the baseline is that entity until a push stamps it, so a lost stamp is not read as a delete plus an add.
+- **`init` and `--dry-run` were added.** `init` writes the document id into `lucid.json` before the first push (§5c step 2); `pull-diff --dry-run` is the skill's dry run (§6c step 3) so no change-set file is written with a placeholder source id.
+- **`rerouteLines` can re-attach a line end to another row** (found live: it moved a line's PK end to `ADDRESS`). The runtime now restores each rerouted line's row pins, and the push planner re-pins any line whose primary end is not on the parent's PK row.
+- **Header colour follows Kind.** The snapshot carries `headerShading`, and a push repairs a stale colour (a Kind changed in Lucid and accepted is the case).
+- **Sizes.** Measured in Lucid: height = 40 px + 32 px per row, about 10 px per character. Columns are widened so no cell wraps; every table is laid out with 200 px of slack, giving >=160 px between tables (checked on the 150-entity model).
+- **Active decisions** are read with a small parser for the Index table (`activeDecisions` in `pull.mjs`), because `parseDecisions` returns only statuses, not Affects. A `global` decision is not expanded (it names no element); the apply agent still judges it.
+- **Re-proposal rule:** nothing to implement. Every pull is a new S-ID, higher than every earlier one, so a rejected Lucid change is proposed again by design.
+- **Snapshot paging** (§6a) was not needed: S4 measured a 50-entity read at <100 ms.
+- **Group frames** do not move with tables a person drags out; a new table in an existing group goes to the right of that group's rightmost table and grows the frame to fit.
+- The sample baseline has no `## Groups`, so groups were derived. For the live run the scratch `ERD.md` got a `## Groups` table and `Group` bullets (what an `erd-analyst` revise does) before the new table with a Group was accepted.
+- **Gate C was simulated by hand.** The live run applied the accepted ops to the scratch `ERD.md` itself, following `erd-analyst` apply mode (Version + 1, Change log row, citations to the new source id), rather than launching the agent.
+
 ### Verification
+
+`node --test "tools/*/test/*.test.mjs"`: 101 tests, all green (the existing erd-view and erd-assist tests plus 3 new files for erd-lucid).
+
+Live, in `project-terrarium sync test (delete me)` (https://lucid.app/lucidchart/3e49ca06-c800-4ed4-bfe8-bbe127f51da6/edit, **left for the user to delete**), with a scratch copy of `examples/fixtures/baseline/ERD.md`:
+
+1. **First push:** 14 entities, 18 lines, 3 group frames and the header in one run (33 ops, 0 errors). The PNG export shows no overlaps, no wrapped cells and no lines to a lookup table (`docs/design/erd-lucid/first-push.png`).
+2. **Five edits made in Lucid by script** (added row, changed type, deleted line, new table with Group set, Kind changed).
+3. **Push refused:** `Lucid has 5 unpulled change(s). Run pull first.`, exit 3.
+4. **Pull:** exactly 5 proposed changes (2 additive, 2 modifying, 1 breaking) and a ledger row (S4, `lucid-diagram`). Accepted 4, rejected 1 (the type change); ERD Version 1 to 2 with citations to S4.
+5. **Push:** reverted the rejected type, stamped the new table with `ERD_ID E-15`, repaired the stale header colour, created or moved no table. The second pull and a second push both said `Lucid doc matches ERD v2.` This step found the `rerouteLines` pin bug above; it was fixed and re-run live.
+6. **Deprecated a field in `ERD.md` (v3):** the push removed the row. The x and y of every table were identical before and after (only the table that lost a row got shorter); all 17 lines stayed on their rows (`docs/design/erd-lucid/after-round-trip.png`).
+
+Not exercised live: a push that creates a brand-new table in a *new* group (covered by unit tests of the plan and by the runtime's code path for frames), and the paired question flow for a conflict (unit-tested only).

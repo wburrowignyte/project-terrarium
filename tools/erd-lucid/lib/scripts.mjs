@@ -77,9 +77,16 @@ const pinRel = (o, lineId) => {
   return erds.createRelationship({ primaryEntityId: p, foreignEntityId: c, ...spec });
 };
 
+// rerouteLines tidies the route but can re-attach an end to another row, so the pins are put back afterwards.
 const reroute = async (ids) => {
   const l = ids.map((i) => lines.get(i)).filter(Boolean);
-  if (l.length) await bc.rerouteLines({ blockIds: [...ents.values()], lineIds: l });
+  if (!l.length) return;
+  const pins = new Map(erds.listRelationships().filter((r) => l.includes(r.lineId)).map((r) => [r.lineId, [r.primary.fieldIndex, r.foreign.fieldIndex]]));
+  await bc.rerouteLines({ blockIds: [...ents.values()], lineIds: l });
+  for (const r of erds.listRelationships()) {
+    const p = pins.get(r.lineId);
+    if (p && (r.primary.fieldIndex !== p[0] || r.foreign.fieldIndex !== p[1])) erds.updateRelationship(r.lineId, { primaryFieldIndex: p[0], foreignFieldIndex: p[1] });
+  }
 };
 
 const run = {

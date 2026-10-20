@@ -94,9 +94,9 @@ const ceil10 = (n) => Math.ceil(n / 10) * 10;
 export function entitySize(e) {
   const rows = e.fields.map(fieldToRow);
   const longest = (k) => Math.max(0, ...rows.map((r) => (r[k] ?? '').length));
-  // Measured in Lucid: about 10 px per character, rows 35.5 px, header 33 px. Wide enough that no cell wraps.
-  const columnWidths = [ceil10(Math.max(40, 10.2 * longest('key') + 28)), ceil10(Math.max(140, 10.2 * Math.max(longest('name'), e.table.length * 0.8) + 28)), ceil10(Math.max(220, 10.2 * longest('type') + 28))];
-  return { columnWidths, w: columnWidths.reduce((a, b) => a + b, 0), h: Math.ceil(33 + 35.5 * Math.max(1, rows.length)) };
+  // Measured in Lucid: about 10 px per character; height = 40 px + 32 px per row (when no cell wraps). Widths are generous so none does.
+  const columnWidths = [ceil10(Math.max(40, 10.2 * longest('key') + 28)), ceil10(Math.max(140, 10.8 * Math.max(longest('name'), e.table.length * 0.8) + 30)), ceil10(Math.max(220, 10.2 * longest('type') + 28))];
+  return { columnWidths, w: columnWidths.reduce((a, b) => a + b, 0), h: 40 + 32 * Math.max(1, rows.length) };
 }
 
 /* ---------- 3-way helpers ---------- */

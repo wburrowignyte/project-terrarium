@@ -1,7 +1,7 @@
 // push-plan (§5b): ERD.md model (+ lucid.json + a fresh snapshot) -> ops -> batches.
 
 import { layoutDiagram } from '../../erd-view/lib/layout.mjs';
-import { fieldToRow, relEnds, entitySize, diffModels, fromBaseline } from './model.mjs';
+import { fieldToRow, relEnds, entitySize, diffModels, fromBaseline, KIND_COLORS } from './model.mjs';
 import { normalizeSnapshot } from './snapshot.mjs';
 
 export const INFLATE = 200; // layout slack per node, so tables end up >=160px apart (the erds clearance rule) with room for a frame
@@ -72,6 +72,10 @@ export function incrementalPush(n, state, snapshot, { batchSize = DEFAULT_BATCH,
     ops.push({ op: 'adopt-entity', ...entityData(entById.get(e.id)), lucidId: e.lucidId }); summary['adopt-entity']++; attrTouched.add(e.id);
   }
   for (const c of changes) if (c.k === 'entity~') { attrTouched.add(c.id); if (c.attr === 'table') renamed.add(c.id); }
+  for (const e of now.entities) { // the header colour follows Kind: fix it when it is stale (only when the snapshot reports it)
+    const mine = entById.get(e.id);
+    if (mine && e.shading !== undefined && (KIND_COLORS[mine.kind] ?? null) !== e.shading) attrTouched.add(e.id);
+  }
   for (const id of attrTouched) {
     if (ops.some((o) => o.op === 'adopt-entity' && o.id === id)) continue;
     ops.push({ op: 'update-entity', ...entityData(entById.get(id)), rename: renamed.has(id) }); summary['update-entity']++;
@@ -110,6 +114,10 @@ export function incrementalPush(n, state, snapshot, { batchSize = DEFAULT_BATCH,
     else if (c.k === 'rel~' && !relDone.has(c.id)) { ops.push({ ...relOp(ours.relationships.find((r) => r.id === c.id), 'update-rel'), lineId: c.x.lineId }); summary['update-rel']++; relDone.add(c.id); }
   }
   const moved = new Set([...synced, ...created]);
+  for (const r of ours.relationships) { // an end somebody (or Lucid's rerouting) attached to another row of the parent: pin it back to the PK
+    const l = now.relationships.find((x) => x.id === r.id);
+    if (l && !relDone.has(r.id) && l.pk !== r.pk) { ops.push({ ...relOp(r, 'update-rel'), lineId: l.lineId }); summary['update-rel']++; relDone.add(r.id); }
+  }
   for (const r of ours.relationships) { // lines pinned to rows that moved
     if (relDone.has(r.id) || !(moved.has(r.from) || moved.has(r.to))) continue;
     const l = now.relationships.find((x) => x.id === r.id);

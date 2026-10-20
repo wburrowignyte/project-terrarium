@@ -7,8 +7,9 @@ import { join } from 'node:path';
 import { normalizeErd, entitySize, toBaseline } from '../lib/model.mjs';
 import { toSeen } from '../lib/snapshot.mjs';
 import { firstPush, incrementalPush, unpulled } from '../lib/push.mjs';
+import { batchScript } from '../lib/scripts.mjs';
 import { genLarge } from '../../erd-view/test/gen-large.mjs';
-import { baselineMd, groupedMd, stateFor, snapshotFor, edit, shape, row, mdEdit, cli } from './helpers.mjs';
+import { baselineMd, groupedMd, stateFor, snapshotFor, edit, shape, row, lineFor, mdEdit, cli } from './helpers.mjs';
 
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
 const opts = { date: '2026-10-20' };
@@ -238,4 +239,32 @@ test('CLI: init, first push, record, then a matching incremental push', () => {
   assert.equal(state.baseline.entities.length, 14);
   assert.deepEqual(state.baseline, state.seen);
   assert.deepEqual(state.baseline, toBaseline(normalizeErd(baselineMd)));
+});
+
+test('a header colour that no longer matches the Kind (the Kind was changed in Lucid and accepted) is repaired', () => {
+  const ref = normalizeErd(groupedMd).entities.find((e) => e.kind === 'Reference');
+  const heading = groupedMd.split('\n').findIndex((l) => l.startsWith(`### ${ref.id} `));
+  const lines = groupedMd.split('\n');
+  const k = lines.findIndex((l, j) => j > heading && l.startsWith('- **Kind:**'));
+  lines[k] = '- **Kind:** Core';
+  const md = lines.join('\n');
+  const snap = edit(snapshotFor(groupedMd), (s) => { shape(s, ref.table).shapeData.Kind = 'Core'; });
+  const state = stateFor(md);
+  state.seen = toSeen(state.baseline, snap);
+  const plan = incrementalPush(normalizeErd(md), state, snap, opts);
+  assert.deepEqual(plan.counts, { 'update-entity': 1 });
+  assert.equal(plan.ops.find((o) => o.op === 'update-entity').id, ref.id);
+  assert.deepEqual(incrementalPush(normalizeErd(groupedMd), stateFor(groupedMd), snapshotFor(groupedMd), opts).ops, [], 'faithful shading means no op');
+});
+
+test('a line whose primary end drifted off the PK row is pinned back, and the runtime restores pins after rerouting', () => {
+  const snap = edit(snapshotFor(baselineMd), (s) => { const l = lineFor(s, 'R-9'); l.primary.fieldIndex = 5; l.primary.fieldName = 'ADDRESS'; });
+  const state = stateFor(baselineMd);
+  state.seen = toSeen(state.baseline, snap); // the drift was recorded by a pull, so it is not an unpulled edit
+  const plan = incrementalPush(normalizeErd(baselineMd), state, snap, opts);
+  assert.deepEqual(plan.counts, { 'update-rel': 1 });
+  const o = plan.ops.find((x) => x.op === 'update-rel');
+  assert.deepEqual([o.id, o.primaryColumn, o.foreignColumn], ['R-9', 'ID', 'PROVIDER_ID']);
+  const src = batchScript(plan.batches[0], 't');
+  assert.match(src, /rerouteLines[\s\S]*updateRelationship\(r\.lineId, \{ primaryFieldIndex: p\[0\]/, 'pins are restored after rerouteLines');
 });

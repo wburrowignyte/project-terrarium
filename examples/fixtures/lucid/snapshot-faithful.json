@@ -10,6 +10,9 @@
     "w": 400,
     "h": 200
    },
+   "headerShading": {
+    "enabled": false
+   },
    "shapeData": {
     "ERD_ID": "E-1",
     "Kind": "Core",
@@ -56,6 +59,9 @@
     "y": 0,
     "w": 400,
     "h": 200
+   },
+   "headerShading": {
+    "enabled": false
    },
    "shapeData": {
     "ERD_ID": "E-2",
@@ -139,6 +145,9 @@
     "w": 400,
     "h": 200
    },
+   "headerShading": {
+    "enabled": false
+   },
    "shapeData": {
     "ERD_ID": "E-3",
     "Kind": "Core",
@@ -214,6 +223,10 @@
     "w": 400,
     "h": 200
    },
+   "headerShading": {
+    "enabled": true,
+    "color": "#d9d9d9"
+   },
    "shapeData": {
     "ERD_ID": "E-4",
     "Kind": "Reference",
@@ -246,6 +259,9 @@
     "y": 0,
     "w": 400,
     "h": 200
+   },
+   "headerShading": {
+    "enabled": false
    },
    "shapeData": {
     "ERD_ID": "E-5",
@@ -315,6 +331,10 @@
     "w": 400,
     "h": 200
    },
+   "headerShading": {
+    "enabled": true,
+    "color": "#d9d9d9"
+   },
    "shapeData": {
     "ERD_ID": "E-6",
     "Kind": "Reference",
@@ -347,6 +367,9 @@
     "y": 500,
     "w": 400,
     "h": 200
+   },
+   "headerShading": {
+    "enabled": false
    },
    "shapeData": {
     "ERD_ID": "E-7",
@@ -416,6 +439,9 @@
     "w": 400,
     "h": 200
    },
+   "headerShading": {
+    "enabled": false
+   },
    "shapeData": {
     "ERD_ID": "E-8",
     "Kind": "Core",
@@ -469,6 +495,9 @@
     "y": 500,
     "w": 400,
     "h": 200
+   },
+   "headerShading": {
+    "enabled": false
    },
    "shapeData": {
     "ERD_ID": "E-9",
@@ -545,6 +574,10 @@
     "w": 400,
     "h": 200
    },
+   "headerShading": {
+    "enabled": true,
+    "color": "#d9d9d9"
+   },
    "shapeData": {
     "ERD_ID": "E-10",
     "Kind": "Reference",
@@ -577,6 +610,9 @@
     "y": 1000,
     "w": 400,
     "h": 200
+   },
+   "headerShading": {
+    "enabled": false
    },
    "shapeData": {
     "ERD_ID": "E-11",
@@ -653,6 +689,10 @@
     "w": 400,
     "h": 200
    },
+   "headerShading": {
+    "enabled": true,
+    "color": "#e8d5a8"
+   },
    "shapeData": {
     "ERD_ID": "E-12",
     "Kind": "History/Audit",
@@ -728,6 +768,9 @@
     "w": 400,
     "h": 200
    },
+   "headerShading": {
+    "enabled": false
+   },
    "shapeData": {
     "ERD_ID": "E-13",
     "Kind": "Core",
@@ -788,6 +831,10 @@
     "y": 1000,
     "w": 400,
     "h": 200
+   },
+   "headerShading": {
+    "enabled": true,
+    "color": "#d9d9d9"
    },
    "shapeData": {
     "ERD_ID": "E-14",

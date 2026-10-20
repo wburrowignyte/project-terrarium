@@ -1,6 +1,6 @@
 // The Lucid side of the sync: the read-only snapshot script (§6a) and the normalization of its output.
 
-import { rowToField, fieldToRow, endsToRel, relEnds, sigOf } from './model.mjs';
+import { rowToField, fieldToRow, endsToRel, relEnds, sigOf, KIND_COLORS } from './model.mjs';
 
 export const SNAPSHOT_SCRIPT = `// project-terrarium erd-lucid: read-only snapshot of the ERD on the current page
 const erds = skills.erds, fm = skills.formulas;
@@ -10,7 +10,7 @@ for (const s of erds.list()) {
   const e = erds.read(s.id);
   const d = dataOf(s.id);
   out.entities.push({
-    lucidId: s.id, name: e.name, boundingBox: e.boundingBox,
+    lucidId: s.id, name: e.name, boundingBox: e.boundingBox, headerShading: e.headerShading,
     shapeData: { ERD_ID: d.ERD_ID, Kind: d.Kind, Group: d.Group, Sensitivity: d.Sensitivity, Purpose: d.Purpose },
     fields: e.fields.map((f) => ({ index: f.index, name: f.name, key: f.key ?? '', type: f.type ?? '', nullable: f.nullable !== false })),
   });
@@ -55,8 +55,8 @@ export function normalizeSnapshot(snap, ref, { adopt = false } = {}) {
     entities.push({
       id: own, key, lucidId: s.lucidId, table: s.name, kind: d.Kind, group: d.Group, sensitivity: d.Sensitivity, purpose: d.Purpose,
       ...(adoptId ? { adopted: true } : {}), ...(id && !own ? { staleId: id } : {}),
+      shading: s.headerShading ? (s.headerShading.enabled && s.headerShading.color ? s.headerShading.color.slice(0, 7).toLowerCase() : null) : undefined,
       fields: s.fields.filter((f) => (f.name ?? '').trim()).map((f) => rowToField(f)),
-      rawFields: s.fields,
     });
   }
   const byKey = new Map(entities.map((e) => [e.key, e]));
@@ -78,6 +78,7 @@ export function modelToSnapshot(n, { takenAt = '2026-10-20T12:00:00.000Z' } = {}
   const lucidId = (id) => `L-${id}`;
   const entities = n.entities.map((e, i) => ({
     lucidId: lucidId(e.id), name: e.table, boundingBox: { x: (i % 5) * 700, y: Math.floor(i / 5) * 500, w: 400, h: 200 },
+    headerShading: KIND_COLORS[e.kind] ? { enabled: true, color: KIND_COLORS[e.kind] } : { enabled: false },
     shapeData: { ERD_ID: e.id, Kind: e.kind, Group: e.group, Sensitivity: e.sensitivity, Purpose: e.purpose },
     fields: e.fields.map((f, j) => { const r = fieldToRow(f); return { index: j + 1, name: r.name, key: r.key, type: r.type, nullable: !f.req }; }),
   }));
