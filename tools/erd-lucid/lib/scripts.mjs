@@ -123,6 +123,7 @@ const run = {
     const r = pinRel(o, null); setData(r.lineId, 'ERD_ID', o.id); lines.set(o.id, r.lineId); out.created[o.id] = r.lineId;
   },
   'update-rel': async (o) => { const l = lines.get(o.id) || o.lineId; if (!l) throw new Error(o.id + ': line not found'); pinRel(o, l); },
+  'clear-rel-label': async (o) => { const l = lines.get(o.id) || o.lineId; if (!l) throw new Error(o.id + ': line not found'); erds.updateRelationship(l, { label: '' }); },
   'delete-rel': async (o) => { const l = lines.get(o.id) || o.lineId; if (l) { bc.deleteItem({ itemIds: [l] }); lines.delete(o.id); } },
   'finalize': async (o) => {
     const frames = await getFrames();

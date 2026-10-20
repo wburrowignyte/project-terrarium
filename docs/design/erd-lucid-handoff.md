@@ -149,7 +149,7 @@ column's record-field name (camelCase), so a field added in Lucid gets its camel
 
 On pull, any child end in `many | oneOrMany | zeroOrMany` means `many-to-one`. Any other end means `one-to-one`.
 Parent-end changes that only flip optionality are reported as a `modify-field` op on the FK's Req, not as a
-cardinality change. New lines are drawn without a label; the relationship Description stays in ERD.md only. Lines already drawn keep any existing label text: the tool neither clears nor reads it back (whether `updateRelationship` with an absent `label` preserves or clears it is unverified).
+cardinality change. New lines are drawn without a label; the relationship Description stays in ERD.md only. Labels already on managed lines (matched to an ERD id) are cleared once on the next push with an explicit `updateRelationship(lineId, { label: '' })` (`clear-rel-label` op); `updateRelationship` only changes the fields it is given, so clearing has to be explicit and the usual `update-rel` never touches a label. The snapshot records each line's label only to decide this; it never enters pull diffs or the baseline, and clearing does not reroute the line. Hand-drawn lines that ERD.md does not know are left alone.
 
 ---
 

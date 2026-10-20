@@ -285,7 +285,9 @@ test('generated script never passes label to createRelationship/updateRelationsh
   const ops = allOps(firstPush(normalizeErd(baselineMd), opts));
   const src = batchScript(ops, 't');
   assert.match(src, /createRelationship|updateRelationship/);
-  assert.ok(!/(createRelationship|updateRelationship)\([^;]*label/.test(src));
+  // the only label write is the explicit clear (`{ label: '' }`) in the clear-rel-label op
+  assert.ok(!/(createRelationship|updateRelationship)\((?![^;]*\{ label: '' \}\);)[^;]*label/.test(src));
+  assert.equal(src.match(/label: ''/g).length, 1);
   assert.ok(!/\bo\.label\b/.test(src), 'the relationship spec reads no label from the op');
 });
 
@@ -303,4 +305,43 @@ test('the runtime never hands Lucid text that starts with "=" (it would be read 
   assert.deepEqual(spec.fields, [{ name: ' =x', type: ' =y', key: ' =z' }]);
   assert.deepEqual(calls.data.find(([n]) => n === 'Purpose'), ['Purpose', ' =SUM(1)']);
   assert.ok(calls.data.every(([, v]) => !String(v).startsWith('=')));
+});
+
+const clears = (plan) => allOps(plan).filter((o) => o.op === 'clear-rel-label');
+const labelled = (id, text = 'has many') => edit(snapshotFor(baselineMd), (s) => { lineFor(s, id).label = text; });
+
+test('a labelled managed line gets exactly one clear-rel-label, and is not rerouted', () => {
+  const plan = incrementalPush(normalizeErd(baselineMd), stateFor(baselineMd), labelled('R-6'), opts);
+  const c = clears(plan);
+  assert.deepEqual(c, [{ op: 'clear-rel-label', id: 'R-6', lineId: 'LN-R-6' }]);
+  assert.equal(plan.summary['clear-rel-label'], 1);
+  assert.equal(plan.counts['clear-rel-label'], 1);
+  assert.ok(!allOps(plan).some((o) => o.op === 'reroute'), 'clearing text moves no line');
+  assert.equal(allOps(plan).filter((o) => o.op === 'update-rel').length, 0);
+});
+
+test('an empty or absent label, or an unmanaged labelled line, emits no clear op', () => {
+  const run1 = (snap) => incrementalPush(normalizeErd(baselineMd), stateFor(baselineMd), snap, opts);
+  assert.equal(clears(run1(labelled('R-6', ''))).length, 0);
+  assert.equal(clears(run1(edit(snapshotFor(baselineMd), (s) => { delete lineFor(s, 'R-6').label; }))).length, 0);
+  assert.equal(run1(snapshotFor(baselineMd)).ops.length, 0);
+  const snap = edit(snapshotFor(baselineMd), (s) => {
+    const l = lineFor(s, 'R-6'); l.erdId = undefined; l.label = 'hand drawn'; l.lineId = 'LN-X';
+    l.primary.fieldIndex = 0; // header-attached: never matched to an ERD id
+  });
+  assert.equal(clears(run1(snap)).length, 0);
+});
+
+test('labels never produce pull noise', () => {
+  const snap = labelled('R-6');
+  const plan = incrementalPush(normalizeErd(baselineMd), stateFor(baselineMd), snap, opts);
+  assert.equal(unpulled(snap, stateFor(baselineMd)).length, 0);
+  assert.deepEqual(toSeen(stateFor(baselineMd).baseline, snap), toSeen(stateFor(baselineMd).baseline, snapshotFor(baselineMd)));
+  assert.ok(plan.ops.length > 0);
+});
+
+test('generated script handles clear-rel-label with label: \'\'', () => {
+  const src = batchScript([{ op: 'clear-rel-label', id: 'R-6', lineId: 'LN-R-6' }], 't');
+  assert.equal(parses(src), true);
+  assert.match(src, /'clear-rel-label'[^\n]*updateRelationship\(l, \{ label: '' \}\)/);
 });
