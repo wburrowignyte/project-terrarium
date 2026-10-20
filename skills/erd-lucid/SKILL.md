@@ -47,6 +47,9 @@ Only ever touch the document recorded in `STATE`. Other Lucid documents (for exa
      A push never overwrites an edit made in Lucid. There is no force option.
    - "Lucid doc matches ERD v<n>." means there is nothing to push: report it and stop.
    - Print any `warning:` lines (for example tables or lines in Lucid that `ERD.md` does not know; they are left alone).
+   - **Deletes need a yes.** If `SCRATCH/push/plan.json` counts any `delete-entity` or `delete-rel` (an entity or line that `ERD.md`
+     deprecated), say how many and which ids, remind the user that a deleted table takes its lines, and any styling or notes
+     added to it in Lucid, with it, and ask before running the batches.
 4. Run `SCRATCH/push/batch-001.js`, `batch-002.js`, … **in order**: `Read` each file and pass its text unchanged as
    `source` to `lucid_run_script` for the document in `STATE`. Each returns `{ ok, created: { <ERD_ID>: <lucid id> }, errors }`.
    Merge every `created` map into `SCRATCH/ids.json`. A failed batch reverts itself (Lucid scripts are atomic): stop,
@@ -83,6 +86,8 @@ Only ever touch the document recorded in `STATE`. Other Lucid documents (for exa
 - Never edit `ERD.md` yourself: only through the accepted change set and `erd-analyst` apply mode.
 - Never delete the Lucid document, and never run any other script against it than the ones the tool generated.
 - Lucid is not mocked anywhere: if a script fails, show the error rather than improvising a fix.
-- Know the limits (say them if asked): there is no headless or CI sync; layout is never read back; citations, descriptions
+- Know the limits (say them if asked): a push deletes the Lucid tables and lines that `ERD.md` has deprecated (with the styling
+  and notes people added to them), and re-routes the lines it creates or re-pins (a route somebody tidied by hand on such a line is
+  redone; tables and the routes of other lines are never touched); there is no headless or CI sync; layout is never read back; citations, descriptions
   (other than Purpose), assumptions and questions live only in `ERD.md`; renaming a field in Lucid is a heuristic
   (Confidence Medium); a copy-pasted table loses its identity.

@@ -208,6 +208,7 @@ export function renderChangeset(r, { run, baseVersion }) {
       out.push(`### ${d.op.id}`, '| Field | Column | Type | Req | Key | Description | Sources |', '|---|---|---|---|---|---|---|', ...d.rows.map((x) => `| ${x.field} | ${x.column} | ${cell(x.type)} | ${x.req} | ${x.key} | ${x.description} | ${x.sources} |`), '');
     }
   }
-  out.push('## Not proposed', ...(r.notProposed.length ? r.notProposed.map((s) => `- ${s}`) : ['- (none)']), '');
+  const notes = [...r.notProposed, ...r.warnings.map((w) => `Warning: ${w}`)];
+  out.push('## Not proposed', ...(notes.length ? notes.map((s) => `- ${s}`) : ['- (none)']), '');
   return out.join('\n');
 }

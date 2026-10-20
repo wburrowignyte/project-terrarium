@@ -137,6 +137,8 @@ per ERD in step with `ERD.md`:
   exactly as in `erd-maintain`. Each pull is a new `lucid-diagram` source in `sources.md`; changes cite it as
   `[S<n> §TABLE.COLUMN]`.
 - A push **refuses** while Lucid holds changes you have not pulled. Existing hand-built Lucid ERDs are never touched.
+- A push deletes the tables and lines that `ERD.md` has deprecated (the skill asks first), and re-routes the lines it creates or
+  re-pins, so a route you tidied by hand on one of those lines is redone. Tables and the routes of other lines stay as they are.
 - Needs the **Lucid** connector. Optional config: `lucid.folder_id`, `lucid.document_title`.
 
 ```bash

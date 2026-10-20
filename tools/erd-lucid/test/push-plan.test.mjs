@@ -268,3 +268,19 @@ test('a line whose primary end drifted off the PK row is pinned back, and the ru
   const src = batchScript(plan.batches[0], 't');
   assert.match(src, /rerouteLines[\s\S]*updateRelationship\(r\.lineId, \{ primaryFieldIndex: p\[0\]/, 'pins are restored after rerouteLines');
 });
+
+test('the runtime never hands Lucid text that starts with "=" (it would be read as a formula)', async () => {
+  const calls = { create: [], data: [], header: [] };
+  const skills = {
+    erds: { list: () => [], listRelationships: () => [], create: (spec) => { calls.create.push(spec); return { id: 'X1' }; }, update() {} },
+    formulas: { listShapeDataFields: () => [], addShapeDataField: (id, n, v) => calls.data.push([n, v]), setShapeDataValue: (id, n, v) => calls.data.push([n, v]) },
+    basecanvasediting: {},
+  };
+  const op = { op: 'create-entity', id: 'E-1', table: '=EVIL', kind: 'Core', group: '', sensitivity: '', purpose: '=SUM(1)', rows: [{ name: '=x', type: '=y', key: '=z' }], columnWidths: [50, 140, 220], x: 0, y: 0 };
+  await new AsyncFunction('skills', batchScript([op], 't'))(skills);
+  const spec = calls.create[0];
+  assert.equal(spec.name, ' =EVIL');
+  assert.deepEqual(spec.fields, [{ name: ' =x', type: ' =y', key: ' =z' }]);
+  assert.deepEqual(calls.data.find(([n]) => n === 'Purpose'), ['Purpose', ' =SUM(1)']);
+  assert.ok(calls.data.every(([, v]) => !String(v).startsWith('=')));
+});

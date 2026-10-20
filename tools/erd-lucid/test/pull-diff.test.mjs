@@ -169,6 +169,7 @@ test('duplicate ERD_ID (copy/paste): the shape that matches the baseline wins, t
   });
   const r = pull(snap);
   assert.ok(r.warnings.some((w) => /Duplicate ERD_ID E-14/.test(w)));
+  assert.match(renderChangeset(r, { run: '2026-10-20', baseVersion: 1 }), /^- Warning: Duplicate ERD_ID E-14/m, 'warnings are visible at Gate C, not only on stderr');
   assert.deepEqual(r.ops.map((o) => o.op), ['add-entity']);
   assert.match(r.ops[0].target, /CCA_COUNTY_COPY/);
 });

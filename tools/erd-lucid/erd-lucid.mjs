@@ -3,8 +3,7 @@
 // generated scripts and snapshots to and from Lucid through the Lucid MCP connector.
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { normalizeErd, toBaseline, fromBaseline } from './lib/model.mjs';
+import { normalizeErd, toBaseline } from './lib/model.mjs';
 import { SNAPSHOT_SCRIPT, toSeen } from './lib/snapshot.mjs';
 import { batchScript } from './lib/scripts.mjs';
 import { firstPush, incrementalPush, unpulled, DEFAULT_BATCH } from './lib/push.mjs';
@@ -41,8 +40,6 @@ const writeState = (p, st) => writeFileSync(p, JSON.stringify(st, null, 2) + '\n
 
 const [cmd, ...rest] = process.argv.slice(2);
 const a = parseArgs(rest);
-const here = dirname(fileURLToPath(import.meta.url));
-void here;
 
 if (!cmd || cmd === '-h' || cmd === '--help') { console.log(USAGE); process.exit(cmd ? 0 : 2); }
 
@@ -119,4 +116,3 @@ if (cmd === 'snapshot-script') {
     console.log(`Recorded pull at ${snap.takenAt}; baseline is ERD v${n.version}`);
   } else die(`record needs --push or --pull\n${USAGE}`);
 } else die(`Unknown command: ${cmd}\n${USAGE}`);
-void fromBaseline;

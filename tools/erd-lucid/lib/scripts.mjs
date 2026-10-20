@@ -8,7 +8,9 @@ const RUNTIME = String.raw`
 const erds = skills.erds, fm = skills.formulas, bc = skills.basecanvasediting;
 const out = { ok: true, created: {}, errors: [], applied: 0 };
 const dataOf = (id) => { const o = {}; try { for (const x of fm.listShapeDataFields(id)) o[x.name] = x.value; } catch (e) {} return o; };
+// Everything written to Lucid goes through clean(): text that starts with '=' would be read as a formula.
 const clean = (v) => { v = v == null ? '' : String(v); return v.charAt(0) === '=' ? ' ' + v : v; };
+const cleanRow = (r) => ({ name: clean(r.name), type: clean(r.type), key: clean(r.key) });
 const setData = (id, name, value) => { if (name in dataOf(id)) fm.setShapeDataValue(id, name, clean(value)); else fm.addShapeDataField(id, name, clean(value)); };
 const stamp = (id, o) => { setData(id, 'ERD_ID', o.id); setData(id, 'Kind', o.kind); setData(id, 'Group', o.group); setData(id, 'Sensitivity', o.sensitivity); setData(id, 'Purpose', o.purpose); };
 const shade = (id, kind) => { const c = SHADE[kind]; erds.update(id, c ? { headerShading: { enabled: true, color: c } } : { headerShading: { enabled: false } }); };
@@ -51,12 +53,13 @@ const growFrame = async (group, id) => {
     const f = bc.inspect([frames[group]])[0], bb = f.boundingBox;
     bc.resizeBlock({ itemId: frames[group], width: Math.max(bb.w, e.boundingBox.x + e.boundingBox.w + 50 - bb.x), height: Math.max(bb.h, e.boundingBox.y + e.boundingBox.h + 50 - bb.y) });
   } else {
-    const w = await bc.wrapInContainer({ itemIds: [id], className: 'SparkFrameBlock', label: group, padding: 50 });
+    const w = await bc.wrapInContainer({ itemIds: [id], className: 'SparkFrameBlock', label: clean(group), padding: 50 });
     setData(w.containerId, 'ERD_ID', 'F:' + group);
     out.created['F:' + group] = w.containerId; frames[group] = w.containerId;
   }
 };
-const syncFields = (id, rows) => {
+const syncFields = (id, rowsIn) => {
+  const rows = rowsIn.map(cleanRow);
   const cur = erds.read(id).fields.map((f) => f.name);
   rows.forEach((r, i) => {
     const j = cur.indexOf(r.name, i);
@@ -68,11 +71,12 @@ const syncFields = (id, rows) => {
   while (cur.length > rows.length) { erds.removeField(id, cur.length); cur.pop(); }
 };
 const pinRel = (o, lineId) => {
+  o = { ...o, primaryColumn: clean(o.primaryColumn), foreignColumn: clean(o.foreignColumn) };
   const p = ents.get(o.primary), c = ents.get(o.foreign);
   if (!p || !c) throw new Error(o.id + ': entity not found (' + (p ? o.foreign : o.primary) + ')');
   const pi = erds.read(p).fields.findIndex((f) => f.name === o.primaryColumn) + 1, ci = erds.read(c).fields.findIndex((f) => f.name === o.foreignColumn) + 1;
   if (!pi || !ci) throw new Error(o.id + ': column not found (' + (pi ? o.foreignColumn : o.primaryColumn) + ')');
-  const spec = { primaryFieldIndex: pi, foreignFieldIndex: ci, primaryCardinality: o.pc, foreignCardinality: o.fc, label: o.label || '' };
+  const spec = { primaryFieldIndex: pi, foreignFieldIndex: ci, primaryCardinality: o.pc, foreignCardinality: o.fc, label: clean(o.label) };
   if (lineId) return erds.updateRelationship(lineId, spec);
   return erds.createRelationship({ primaryEntityId: p, foreignEntityId: c, ...spec });
 };
@@ -94,7 +98,7 @@ const run = {
   'create-entity': async (o) => {
     if (ents.has(o.id)) return;
     const at = o.place ? place(o.group) : { x: o.x, y: o.y };
-    const e = erds.create({ name: o.table, variant: 'keyFieldType', fields: o.rows, location: at, columnWidths: o.columnWidths });
+    const e = erds.create({ name: clean(o.table), variant: 'keyFieldType', fields: o.rows.map(cleanRow), location: at, columnWidths: o.columnWidths });
     stamp(e.id, o); shade(e.id, o.kind);
     ents.set(o.id, e.id); out.created[o.id] = e.id;
     if (o.place) await growFrame(o.group, e.id);
@@ -105,7 +109,7 @@ const run = {
   },
   'update-entity': async (o) => {
     const id = ents.get(o.id); if (!id) throw new Error(o.id + ': entity not found');
-    if (o.rename) erds.update(id, { name: o.table });
+    if (o.rename) erds.update(id, { name: clean(o.table) });
     stamp(id, o); shade(id, o.kind);
   },
   'delete-entity': async (o) => {
@@ -125,19 +129,19 @@ const run = {
     for (const g of o.groups) {
       if (frames[g.name]) continue;
       const ids = g.ids.map((i) => ents.get(i)).filter(Boolean); if (!ids.length) continue;
-      const w = await bc.wrapInContainer({ itemIds: ids, className: 'SparkFrameBlock', label: g.name, padding: 50 });
+      const w = await bc.wrapInContainer({ itemIds: ids, className: 'SparkFrameBlock', label: clean(g.name), padding: 50 });
       setData(w.containerId, 'ERD_ID', 'F:' + g.name); out.created['F:' + g.name] = w.containerId; frames[g.name] = w.containerId;
     }
     await reroute([...lines.keys()]);
     const hdr = await findManaged('TextBlock', 'HEADER');
     if (!hdr['']) {
-      const t = await bc.createBlock({ className: 'TextBlock', label: o.header, x: o.hx, y: o.hy, width: 1400, height: 120 });
+      const t = await bc.createBlock({ className: 'TextBlock', label: clean(o.header), x: o.hx, y: o.hy, width: 1400, height: 120 });
       setData(t.id, 'ERD_ID', 'HEADER'); out.created.HEADER = t.id;
     }
   },
   'update-header': async (o) => {
     const hdr = await findManaged('TextBlock', 'HEADER');
-    if (hdr['']) await bc.setText({ itemId: hdr[''], text: o.header });
+    if (hdr['']) await bc.setText({ itemId: hdr[''], text: clean(o.header) });
   },
 };
 

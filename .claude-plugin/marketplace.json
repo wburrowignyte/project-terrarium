@@ -1,11 +1,7 @@
 {
   "name": "project-terrarium-dev",
-  "owner": {
-    "name": "Ignyte Group"
-  },
-  "metadata": {
-    "description": "Local development marketplace for the project-terrarium plugin."
-  },
+  "owner": { "name": "Ignyte Group" },
+  "metadata": { "description": "Local development marketplace for the project-terrarium plugin." },
   "plugins": [
     {
       "name": "project-terrarium",
