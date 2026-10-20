@@ -183,7 +183,8 @@ descriptions beyond Purpose. That's no more than `ERD.md`, which is committed to
      There is no `--force` in v1.
    - Diff ERD model vs baseline into ops: `create-entity`, `delete-entity` (deprecated or gone), `update-entity`
      (name, shape data, shading), `add-field`, `remove-field`, `update-field`, `move-field` (order), `create-rel`,
-     `delete-rel`, `update-rel`.
+     `delete-rel`, `update-rel`, and `clear-rel-label` (clears a leftover label on a managed line; snapshot-driven,
+     idempotent, no reroute).
    - Place a new entity to the right of the rightmost table in its group's frame (`location.nextTo` with
      `padding: 160`), and grow the frame. **Never move an existing table.**
    - A table that exists in the snapshot with no `ERD_ID` but has the same name as a new ERD entity (someone drew it
