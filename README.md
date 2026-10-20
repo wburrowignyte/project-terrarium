@@ -12,7 +12,7 @@ and receives the outputs.
 | ERD maintain | `/project-terrarium:erd-maintain` | v0.2 |
 | ERD view (ERD.md to interactive HTML) | `/project-terrarium:erd-view` | v0.2 |
 | ERD assist | `/project-terrarium:erd-assist` | v0.1 |
-| ERD Lucid sync | `/project-terrarium:erd-lucid` | v0.1 |
+| ERD Lucid sync | `/project-terrarium:erd-lucid` | v0.1 (new in plugin 0.7.0) |
 
 Status is the module's own version; the plugin version is in `.claude-plugin/plugin.json`.
 

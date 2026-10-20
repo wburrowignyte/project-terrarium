@@ -1,6 +1,6 @@
 // The Lucid side of the sync: the read-only snapshot script (§6a) and the normalization of its output.
 
-import { rowToField, fieldToRow, endsToRel, relEnds, sigOf, KIND_COLORS } from './model.mjs';
+import { rowToField, fieldToRow, endsToRel, relEnds, sigOf, unclean, KIND_COLORS } from './model.mjs';
 
 export const SNAPSHOT_SCRIPT = `// project-terrarium erd-lucid: read-only snapshot of the ERD on the current page
 const erds = skills.erds, fm = skills.formulas;
@@ -53,7 +53,7 @@ export function normalizeSnapshot(snap, ref, { adopt = false } = {}) {
     keyOfLucid.set(s.lucidId, key);
     const d = s.shapeData ?? {};
     entities.push({
-      id: own, key, lucidId: s.lucidId, table: s.name, kind: d.Kind, group: d.Group, sensitivity: d.Sensitivity, purpose: d.Purpose,
+      id: own, key, lucidId: s.lucidId, table: unclean(s.name), kind: unclean(d.Kind), group: unclean(d.Group), sensitivity: unclean(d.Sensitivity), purpose: unclean(d.Purpose),
       ...(adoptId ? { adopted: true } : {}), ...(id && !own ? { staleId: id } : {}),
       shading: s.headerShading ? (s.headerShading.enabled && s.headerShading.color ? s.headerShading.color.slice(0, 7).toLowerCase() : null) : undefined,
       fields: s.fields.filter((f) => (f.name ?? '').trim()).map((f) => rowToField(f)),
@@ -66,7 +66,7 @@ export function normalizeSnapshot(snap, ref, { adopt = false } = {}) {
     const from = byKey.get(keyOfLucid.get(r.foreign.entityId)), to = byKey.get(keyOfLucid.get(r.primary.entityId));
     if (!from || !to) continue;
     if (!r.primary.fieldIndex || !r.foreign.fieldIndex || !r.primary.fieldName || !r.foreign.fieldName) { headerRels.push({ lineId: r.lineId, from: from.table, to: to.table }); continue; }
-    const rel = { from: from.key, to: to.key, fk: r.foreign.fieldName, pk: r.primary.fieldName, lineId: r.lineId, ...endsToRel(r.primary.cardinality, r.foreign.cardinality) };
+    const rel = { from: from.key, to: to.key, fk: unclean(r.foreign.fieldName), pk: unclean(r.primary.fieldName), lineId: r.lineId, ...endsToRel(r.primary.cardinality, r.foreign.cardinality) };
     const id = r.erdId || refBySig.get(sigOf(rel)) || null;
     relationships.push({ ...rel, id, key: id ?? `new:${r.lineId}` });
   }

@@ -65,12 +65,16 @@ export const fromBaseline = (b) => ({
 
 /* ---------- field rows (§4c) ---------- */
 
+// The runtime stores a value that starts with '=' with one leading space (Lucid would read it as a formula); read it back without.
+export const unclean = (v) => (typeof v === 'string' && v.startsWith(' =') ? v.slice(1) : v);
+
 export function fieldToRow(f) {
   const flags = f.key.map((k) => (k === 'UK' ? 'AK' : k)).join(',');
   return { name: f.column, key: [flags, f.lookupType ? `LK:${f.lookupType}` : ''].filter(Boolean).join(' '), type: [f.type, f.req ? 'NOT NULL' : ''].filter(Boolean).join(' ') };
 }
 
-export function rowToField(row) {
+export function rowToField(rowIn) {
+  const row = { ...rowIn, name: unclean(rowIn.name), key: unclean(rowIn.key), type: unclean(rowIn.type) };
   const keyText = row.key ?? '';
   const lk = keyText.match(/LK:(\S+)/);
   const rest = keyText.replace(/LK:\S+/, '');

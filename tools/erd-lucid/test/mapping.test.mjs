@@ -78,3 +78,20 @@ test('normalizeErd drops deprecated elements, LOOKUP lines and lines it cannot p
   assert.equal(base.relationships.length, 18);
   assert.equal(base.entities.find((e) => e.id === 'E-2').fields.find((f) => f.column === 'SSN').req, false);
 });
+
+test('a name that starts with "=" survives the store-and-read-back through Lucid unchanged', async () => {
+  const { batchScript } = await import('../lib/scripts.mjs');
+  const { normalizeSnapshot } = await import('../lib/snapshot.mjs');
+  const stored = { entity: null, rows: null, data: {} };
+  const skills = {
+    erds: { list: () => [], listRelationships: () => [], create: (spec) => { stored.entity = spec.name; stored.rows = spec.fields; return { id: 'X1' }; }, update() {} },
+    formulas: { listShapeDataFields: () => [], addShapeDataField: (id, n, v) => { stored.data[n] = v; } },
+    basecanvasediting: {},
+  };
+  const op = { op: 'create-entity', id: 'E-1', table: '=T', kind: 'Core', group: '=G', sensitivity: '', purpose: '=P', rows: [{ name: '=A', key: 'PK', type: 'Integer NOT NULL' }], columnWidths: [50, 140, 220], x: 0, y: 0 };
+  await new (Object.getPrototypeOf(async () => {}).constructor)('skills', batchScript([op], 't'))(skills);
+  assert.equal(stored.entity, ' =T');
+  const snap = { takenAt: 'x', relationships: [], entities: [{ lucidId: 'L1', name: stored.entity, boundingBox: { x: 0, y: 0, w: 1, h: 1 }, shapeData: { ERD_ID: 'E-1', Kind: stored.data.Kind, Group: stored.data.Group, Purpose: stored.data.Purpose, Sensitivity: stored.data.Sensitivity }, fields: stored.rows.map((r, i) => ({ index: i + 1, name: r.name, key: r.key, type: r.type, nullable: false })) }] };
+  const [e] = normalizeSnapshot(snap, { entities: [], relationships: [] }).entities;
+  assert.deepEqual([e.table, e.group, e.purpose, e.fields[0].column], ['=T', '=G', '=P', '=A']);
+});
