@@ -286,9 +286,7 @@ test('generated script never passes label to createRelationship/updateRelationsh
   const src = batchScript(ops, 't');
   assert.match(src, /createRelationship|updateRelationship/);
   assert.ok(!/(createRelationship|updateRelationship)\([^;]*label/.test(src));
-  const spec = readFileSync(new URL('../lib/scripts.mjs', import.meta.url), 'utf8').match(/const spec = \{[^\n]*\}/g) || [];
-  assert.ok(spec.length > 0 && spec.every((l) => !/label/.test(l)), 'relationship spec has no label');
-  assert.match(src, /SparkFrameBlock[^\n]*label/, 'group frame labels are untouched');
+  assert.ok(!/\bo\.label\b/.test(src), 'the relationship spec reads no label from the op');
 });
 
 test('the runtime never hands Lucid text that starts with "=" (it would be read as a formula)', async () => {

@@ -149,7 +149,7 @@ column's record-field name (camelCase), so a field added in Lucid gets its camel
 
 On pull, any child end in `many | oneOrMany | zeroOrMany` means `many-to-one`. Any other end means `one-to-one`.
 Parent-end changes that only flip optionality are reported as a `modify-field` op on the FK's Req, not as a
-cardinality change. Lines carry no label; the relationship Description stays in ERD.md only.
+cardinality change. New lines are drawn without a label; the relationship Description stays in ERD.md only. Lines already drawn keep any existing label text: the tool neither clears nor reads it back (whether `updateRelationship` with an absent `label` preserves or clears it is unverified).
 
 ---
 
