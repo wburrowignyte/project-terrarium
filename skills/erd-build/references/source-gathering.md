@@ -205,7 +205,8 @@ Global source registry for this ERD. IDs are permanent and never reused. Metadat
 | S5 | slide-deck | Provider design review v2 | 2026-10-05 | file:///…/Provider%20review.pptx | mod:2026-10-05T16:22Z | 2026-10-08 | S5-provider-design-review.md | active |
 ```
 
-- **Kind:** `context-md` | `transcript` | `slide-deck` | `sharepoint-doc` | `local-file`.
+- **Kind:** `context-md` | `transcript` | `slide-deck` | `sharepoint-doc` | `local-file` | `lucid-diagram`
+  (`lucid-diagram` rows are written only by `erd-lucid pull`; Fingerprint `lucid:<lastModified>`).
 - **Fingerprint** (the prefix tells you how it was computed). The scheme depends on **how the
   source was found**, not where the file lives:
   - `git:<blob>` for every `context_paths` match: `git hash-object <path>`, first 7 characters.
