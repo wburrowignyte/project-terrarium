@@ -149,7 +149,7 @@ column's record-field name (camelCase), so a field added in Lucid gets its camel
 
 On pull, any child end in `many | oneOrMany | zeroOrMany` means `many-to-one`. Any other end means `one-to-one`.
 Parent-end changes that only flip optionality are reported as a `modify-field` op on the FK's Req, not as a
-cardinality change. New lines are drawn without a label; the relationship Description stays in ERD.md only. Lines already drawn keep any existing label text: the tool neither clears nor reads it back (whether `updateRelationship` with an absent `label` preserves or clears it is unverified).
+cardinality change. New lines are drawn without a label; the relationship Description stays in ERD.md only. Labels already on managed lines (matched to an ERD id) are cleared once on the next push with an explicit `updateRelationship(lineId, { label: '' })` (`clear-rel-label` op); `updateRelationship` only changes the fields it is given, so clearing has to be explicit and the usual `update-rel` never touches a label. The snapshot records each line's label only to decide this; it never enters pull diffs or the baseline, and clearing does not reroute the line. Hand-drawn lines that ERD.md does not know are left alone.
 
 ---
 
@@ -183,7 +183,8 @@ descriptions beyond Purpose. That's no more than `ERD.md`, which is committed to
      There is no `--force` in v1.
    - Diff ERD model vs baseline into ops: `create-entity`, `delete-entity` (deprecated or gone), `update-entity`
      (name, shape data, shading), `add-field`, `remove-field`, `update-field`, `move-field` (order), `create-rel`,
-     `delete-rel`, `update-rel`.
+     `delete-rel`, `update-rel`, and `clear-rel-label` (clears a leftover label on a managed line; snapshot-driven,
+     idempotent, no reroute).
    - Place a new entity to the right of the rightmost table in its group's frame (`location.nextTo` with
      `padding: 160`), and grow the frame. **Never move an existing table.**
    - A table that exists in the snapshot with no `ERD_ID` but has the same name as a new ERD entity (someone drew it

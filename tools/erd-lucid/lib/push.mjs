@@ -53,7 +53,7 @@ export function incrementalPush(n, state, snapshot, { batchSize = DEFAULT_BATCH,
   const changes = diffModels(now, ours);
   const entById = new Map(n.entities.map((e) => [e.id, e]));
   const lucidById = new Map(now.entities.filter((e) => e.id).map((e) => [e.id, e]));
-  const summary = { 'create-entity': 0, 'adopt-entity': 0, 'delete-entity': 0, 'update-entity': 0, 'add-field': 0, 'remove-field': 0, 'update-field': 0, 'move-field': 0, 'create-rel': 0, 'delete-rel': 0, 'update-rel': 0 };
+  const summary = { 'create-entity': 0, 'adopt-entity': 0, 'delete-entity': 0, 'update-entity': 0, 'add-field': 0, 'remove-field': 0, 'update-field': 0, 'move-field': 0, 'create-rel': 0, 'delete-rel': 0, 'update-rel': 0, 'clear-rel-label': 0 };
   const removed = new Set(changes.filter((c) => c.k === 'entity-' && c.id).map((c) => c.id));
   const ops = [], synced = new Set(), created = new Set(), renamed = new Set(), attrTouched = new Set();
 
@@ -122,6 +122,13 @@ export function incrementalPush(n, state, snapshot, { batchSize = DEFAULT_BATCH,
     if (relDone.has(r.id) || !(moved.has(r.from) || moved.has(r.to))) continue;
     const l = now.relationships.find((x) => x.id === r.id);
     if (l) ops.push({ ...relOp(r, 'update-rel'), lineId: l.lineId });
+  }
+  // Labels already on managed lines are cleared once (a separate op: updateRelationship only changes the fields it is given,
+  // so update-rel never touches the label). Snapshot label '' means done, so a re-push emits nothing. Not part of `touched`.
+  const wanted = new Set(ours.relationships.map((r) => r.id));
+  for (const l of now.relationships) {
+    if (!l.id || !wanted.has(l.id) || !l.label) continue;
+    ops.push({ op: 'clear-rel-label', id: l.id, lineId: l.lineId }); summary['clear-rel-label']++;
   }
   const touched = ops.filter((o) => o.op === 'create-rel' || o.op === 'update-rel').map((o) => o.id);
   if (touched.length) ops.push({ op: 'reroute', ids: touched });

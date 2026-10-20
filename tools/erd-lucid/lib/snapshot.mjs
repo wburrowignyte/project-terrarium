@@ -17,7 +17,7 @@ for (const s of erds.list()) {
 }
 for (const r of erds.listRelationships()) {
   const end = (x) => ({ entityId: x.entityId, fieldIndex: x.fieldIndex, fieldName: x.fieldName, cardinality: x.cardinality });
-  out.relationships.push({ lineId: r.lineId, erdId: dataOf(r.lineId).ERD_ID, primary: end(r.primary), foreign: end(r.foreign) });
+  out.relationships.push({ lineId: r.lineId, erdId: dataOf(r.lineId).ERD_ID, primary: end(r.primary), foreign: end(r.foreign), label: r.label ?? '' });
 }
 return out;
 `;
@@ -66,7 +66,7 @@ export function normalizeSnapshot(snap, ref, { adopt = false } = {}) {
     const from = byKey.get(keyOfLucid.get(r.foreign.entityId)), to = byKey.get(keyOfLucid.get(r.primary.entityId));
     if (!from || !to) continue;
     if (!r.primary.fieldIndex || !r.foreign.fieldIndex || !r.primary.fieldName || !r.foreign.fieldName) { headerRels.push({ lineId: r.lineId, from: from.table, to: to.table }); continue; }
-    const rel = { from: from.key, to: to.key, fk: unclean(r.foreign.fieldName), pk: unclean(r.primary.fieldName), lineId: r.lineId, ...endsToRel(r.primary.cardinality, r.foreign.cardinality) };
+    const rel = { from: from.key, to: to.key, fk: unclean(r.foreign.fieldName), pk: unclean(r.primary.fieldName), lineId: r.lineId, label: r.label ?? '', ...endsToRel(r.primary.cardinality, r.foreign.cardinality) };
     const id = r.erdId || refBySig.get(sigOf(rel)) || null;
     relationships.push({ ...rel, id, key: id ?? `new:${r.lineId}` });
   }
