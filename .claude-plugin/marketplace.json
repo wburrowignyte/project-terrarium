@@ -1,12 +1,16 @@
 {
   "name": "project-terrarium-dev",
-  "owner": { "name": "Ignyte Group" },
-  "metadata": { "description": "Local development marketplace for the project-terrarium plugin." },
+  "owner": {
+    "name": "Ignyte Group"
+  },
+  "metadata": {
+    "description": "Local development marketplace for the project-terrarium plugin."
+  },
   "plugins": [
     {
       "name": "project-terrarium",
       "source": "./",
-      "description": "Project maintenance for software delivery engagements. Module 1: ERD build + Appian architecture review."
+      "description": "Project maintenance for software delivery engagements. ERD build, Appian architecture review, incremental maintenance, an HTML viewer, an iterative assistant, and Lucidchart sync (push the ERD to Lucid, pull team edits back as a change set)."
     }
   ]
 }

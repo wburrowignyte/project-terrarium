@@ -68,6 +68,11 @@ staging_dir: ".project-terrarium/staging"   # extracted source text per run (git
 outputs:
   erd_dir: "erd"
 
+# optional: ERD <-> Lucidchart sync (/project-terrarium:erd-lucid)
+# lucid:
+#   folder_id: 12345                       # Lucid folder where the first push creates the document (default: your root folder)
+#   document_title: "<Project> ERD"        # default "<project.name> ERD"
+
 maintain:
   lookback_days: 3          # overlap before the ledger watermark when searching remote sources
   auto_accept: []           # change-set classes accepted without asking, e.g. [additive]
@@ -94,5 +99,6 @@ is no config key for it: it always sits next to `ERD.md`.
 - If the M365 connector is available, run one `sharepoint_folder_search` per transcript folder and one
   `sharepoint_search` (`fileType: docx`, limit 3). Report the folder and hit counts. Don't read
   content during setup.
-- Finish by telling the user to run `/project-terrarium:erd-build`, `/project-terrarium:erd-maintain` for later updates, and
-  `/project-terrarium:erd-assist` to iterate on the ERD and record decisions.
+- Finish by telling the user to run `/project-terrarium:erd-build`, `/project-terrarium:erd-maintain` for later updates,
+  `/project-terrarium:erd-assist` to iterate on the ERD and record decisions, and (with the Lucid connector)
+  `/project-terrarium:erd-lucid push` to draw the ERD in Lucidchart. `<erd_dir>/lucid.json` is committed and managed only by erd-lucid.

@@ -4,9 +4,15 @@ Find the sources that are **new or changed** since the last run. This file defin
 new*. `skills/erd-build/references/source-gathering.md` defines *how* to read each kind of source
 and how to stage it; follow it for those steps. All Microsoft 365 access is read-only.
 
+## 0. Not discovered here
+
+Ledger rows of Kind `lucid-diagram` are written only by `erd-lucid pull`. `erd-maintain` never searches for,
+re-stages or supersedes them, and a Lucid document does not move the watermark that decides what is new in SharePoint:
+ignore those rows when computing it.
+
 ## 1. Watermark
 
-Watermark = the newest `Ingested` date in `<erd_dir>/sources.md`, minus `maintain.lookback_days`
+Watermark = the newest `Ingested` date in `<erd_dir>/sources.md` (rows of Kind `lucid-diagram` excluded), minus `maintain.lookback_days`
 (default 3). A `since:<date>` argument overrides it.
 
 ## 2. Scope of each search
