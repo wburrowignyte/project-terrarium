@@ -68,6 +68,13 @@ test('camelCase naming follows the ERD naming rules', () => {
   assert.deepEqual(keyFlags('PK, FK→E-1'), ['PK', 'FK']);
 });
 
+test('model: relationships have no label field', () => {
+  for (const md of [baselineMd, groupedMd]) {
+    const { relationships } = normalizeErd(md);
+    assert.ok(relationships.length > 0 && relationships.every((r) => !('label' in r)));
+  }
+});
+
 test('normalizeErd drops deprecated elements, LOOKUP lines and lines it cannot pin', () => {
   const n = normalizeErd(groupedMd);
   assert.ok(n.entities.some((e) => e.kind === 'Lookup'));

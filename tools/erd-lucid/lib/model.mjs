@@ -37,7 +37,7 @@ export function normalizeErd(md) {
     const pk = parent.fields.find((f) => f.key.includes('PK'));
     if (!fk) { warnings.push(`${r.id}: FK "${r.fk}" is not a live field of ${child.table}; relationship not synced`); continue; }
     if (!pk) { warnings.push(`${r.id}: ${parent.table} has no PK row; relationship not synced`); continue; }
-    relationships.push({ id: r.id, key: r.id, from: r.from, to: r.to, fk: fk.column, pk: pk.column, cardinality: r.cardinality === 'one-to-one' ? 'one-to-one' : 'many-to-one', fkReq: fk.req, label: (r.description || '').slice(0, 40) });
+    relationships.push({ id: r.id, key: r.id, from: r.from, to: r.to, fk: fk.column, pk: pk.column, cardinality: r.cardinality === 'one-to-one' ? 'one-to-one' : 'many-to-one', fkReq: fk.req });
   }
   // Citations of the existing elements, for a change set's Supersedes column.
   const cites = { entity: {}, field: {}, rel: {} };

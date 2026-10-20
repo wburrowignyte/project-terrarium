@@ -14,7 +14,7 @@ export const headerText = (n, date) => `${n.title} · ERD v${n.version} · pushe
 
 function relOp(r, op) {
   const e = relEnds(r);
-  return { op, id: r.id, primary: r.to, foreign: r.from, primaryColumn: r.pk, foreignColumn: r.fk, pc: e.primary, fc: e.foreign, label: r.label ?? '' };
+  return { op, id: r.id, primary: r.to, foreign: r.from, primaryColumn: r.pk, foreignColumn: r.fk, pc: e.primary, fc: e.foreign };
 }
 
 function chunk(ops, size) {

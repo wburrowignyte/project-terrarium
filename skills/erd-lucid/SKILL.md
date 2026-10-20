@@ -88,6 +88,6 @@ Only ever touch the document recorded in `STATE`. Other Lucid documents (for exa
 - Lucid is not mocked anywhere: if a script fails, show the error rather than improvising a fix.
 - Know the limits (say them if asked): a push deletes the Lucid tables and lines that `ERD.md` has deprecated (with the styling
   and notes people added to them), and re-routes the lines it creates or re-pins (a route somebody tidied by hand on such a line is
-  redone; tables and the routes of other lines are never touched); there is no headless or CI sync; layout is never read back; citations, descriptions
+  redone; tables and the routes of other lines are never touched); there is no headless or CI sync; layout is never read back; relationship lines carry no label (a relationship's Description lives only in `ERD.md`); citations, descriptions
   (other than Purpose), assumptions and questions live only in `ERD.md`; renaming a field in Lucid is a heuristic
   (Confidence Medium); a copy-pasted table loses its identity.
