@@ -12,6 +12,7 @@ and receives the outputs.
 | ERD maintain | `/project-terrarium:erd-maintain` | v0.2 |
 | ERD view (ERD.md to interactive HTML) | `/project-terrarium:erd-view` | v0.2 |
 | ERD assist | `/project-terrarium:erd-assist` | v0.1 |
+| ERD Lucid sync | `/project-terrarium:erd-lucid` | v0.1 (new in plugin 0.7.0) |
 
 Status is the module's own version; the plugin version is in `.claude-plugin/plugin.json`.
 
@@ -114,6 +115,42 @@ node tools/erd-assist/erd-slice.mjs erd/ERD.md [--outline] [--log N] [--ids E-3,
 
 Tests: `node --test "tools/*/test/*.test.mjs"`.
 
+## ERD in Lucidchart
+
+The team can look at and edit the ERD in Lucidchart. `/project-terrarium:erd-lucid` keeps **one living Lucid document**
+per ERD in step with `ERD.md`:
+
+```
+                    push (draws / updates the doc; never moves a table a person placed)
+   ERD.md  ───────────────────────────────────────────────────────────────►  Lucid doc
+     ▲                                                                           │
+     │  accept at Gate C (same as erd-maintain)        pull (on demand only)     │ people edit tables,
+     └──────────── <RUN>-lucid-changeset.md  ◄───────────────────────────────────┘ rows, lines, shape data
+```
+
+- `/project-terrarium:erd-lucid push` creates the document on the first run (its id is kept in the committed
+  `erd/lucid.json`) and updates it in place afterwards. Each table is a real Lucid ERD entity, drawn in group frames,
+  with the Kind as header colour and `ERD_ID`, `Kind`, `Group`, `Sensitivity`, `Purpose` as shape data. Deprecated items
+  are not drawn, and there are no lines to the shared lookup table.
+- `/project-terrarium:erd-lucid pull` reads the document and writes a **change set** (new tables, fields, types, keys,
+  renames, deleted rows or lines, cardinality, shape data). Nothing changes in `ERD.md` until you accept ops at Gate C,
+  exactly as in `erd-maintain`. Each pull is a new `lucid-diagram` source in `sources.md`; changes cite it as
+  `[S<n> §TABLE.COLUMN]`.
+- A push **refuses** while Lucid holds changes you have not pulled. Existing hand-built Lucid ERDs are never touched.
+- A push deletes the tables and lines that `ERD.md` has deprecated (the skill asks first), and re-routes the lines it creates or
+  re-pins, so a route you tidied by hand on one of those lines is redone. Tables and the routes of other lines stay as they are.
+- Needs the **Lucid** connector. Optional config: `lucid.folder_id`, `lucid.document_title`.
+
+```bash
+node tools/erd-lucid/erd-lucid.mjs push-plan erd/ERD.md --state erd/lucid.json --out <dir>   # the skill runs these for you
+node tools/erd-lucid/erd-lucid.mjs pull-diff erd/ERD.md --state erd/lucid.json --snapshot <snap.json> --source S7 --run 2026-10-20
+```
+
+**Known limits:** needs a Claude session with the Lucid connector (no headless or CI sync); citations, descriptions
+(other than Purpose), assumptions, questions and seed values exist only in `ERD.md`; layout is never read back, and people
+own it after the first push (group frames do not follow a table dragged out of them; the `Group` shape data does); field
+renames in Lucid are a heuristic (Confidence Medium) and copy-pasted tables lose their identity.
+
 ## Deprecations
 
 - **0.5.0:** `sharepoint.meeting_series` is deprecated. Rename it to `sharepoint.transcript_queries` and set
@@ -139,7 +176,7 @@ Prerequisites: the Microsoft 365 connector (SharePoint/OneDrive access). The App
 ## Develop / test
 
 - `claude plugin validate .`
-- `node --test "tools/*/test/*.test.mjs"` runs the `erd-view` and `erd-assist` tool tests.
+- `node --test "tools/*/test/*.test.mjs"` runs the `erd-view`, `erd-assist` and `erd-lucid` tool tests.
 - `examples/sample-project/` is a synthetic consumer repo (child care assistance, no real data).
   Run `claude --plugin-dir <this repo>` from inside it, then `/project-terrarium:erd-build`.
 - `examples/fixtures/flawed-ERD.md` is an ERD with 6 seeded defects (listed in its header comment) for

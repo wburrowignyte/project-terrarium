@@ -34,6 +34,9 @@ structure exactly: section order, heading text, and table columns are what later
   or drop a `[DEC-n]`-cited element. A newer source that contradicts an active decision becomes an open question
   (build, revise) or a `conflict` op with `Supersedes [DEC-n]` (maintain), never a silent change.
 
+- **`lucid.json` is not part of the ERD.** When the team syncs with Lucidchart, `lucid.json` sits next to `ERD.md`
+  (like `sources.md` and `DECISIONS.md`) and is written only by `erd-lucid`. Never edit it by hand, and don't cite it.
+
 ## Citation forms
 
 | Form | Used for |
@@ -42,6 +45,7 @@ structure exactly: section order, heading text, and table columns are what later
 | `[S<n> §turn <k>]` | transcript without timestamps, by speaker turn (`k` is the 1-based turn in the staged file; consecutive lines by the same speaker are one turn) |
 | `[S<n> §Section]` | document, by section |
 | `[S<n> slide <k>]` | slide deck, by 1-based slide number |
+| `[S<n> §TABLE]` / `[S<n> §TABLE.COLUMN]` | a `lucid-diagram` source (the Lucid document), by table or by table and column name |
 | `[DEC-<n>]` | an element set by a Technical Decision in `DECISIONS.md` (a real citation, not an `ASSUMPTION`; an element may carry both source and DEC citations) |
 | `ASSUMPTION` / `CONVENTION` | no source (see above) |
 

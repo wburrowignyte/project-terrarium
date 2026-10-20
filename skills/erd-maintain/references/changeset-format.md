@@ -23,7 +23,9 @@ ops to `ERD.md`. Follow this structure exactly: column order and heading text ar
   elements get provisional IDs `E-new-<k>`, `R-new-<k>`, `A-new-<k>`, `Q-new-<k>`; apply mode
   replaces them with the next free IDs.
 - **Evidence:** citations from the new sources only, in the forms from `erd-format.md`
-  (`[S<n> @HH:MM:SS]`, `[S<n> §Section]`, `[S<n> slide <k>]`).
+  (`[S<n> @HH:MM:SS]`, `[S<n> §Section]`, `[S<n> slide <k>]`). A change set written by `erd-lucid pull` (file
+  `<RUN>-lucid-changeset.md`, source Kind `lucid-diagram`) cites the Lucid document as `[S<n> §TABLE]` or
+  `[S<n> §TABLE.COLUMN]`, by table and column name.
 - **Supersedes:** the existing citation(s) the change overrides. It is **required** for
   `modifying`, `breaking` and `conflict` ops. `[DEC-<n>]` is a valid entry: it marks an op that reverses a
   Technical Decision, and apply mode sets that decision's Status when the op is accepted.

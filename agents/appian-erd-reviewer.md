@@ -28,6 +28,8 @@ still cheap to make.
    pattern `^\| DEC-[0-9]+ \|[^|]*\| Active \|` (the Index Rule cell is the binding text; never read the whole file).
    **Don't raise a finding that only re-argues an active decision.** If a decision leaves a real High-severity risk,
    raise it, naming `DEC-n` in the finding, so the user can supersede it.
+   A ledger source of Kind `lucid-diagram` is an edit by the project team in the shared Lucid diagram. Treat a finding that
+   rests on one like one that rests on a vendor design decision: valid, but below what DHS/state stakeholders said.
 2. In **delta** scope, walk the checklist only for `changed_ids` and every entity linked to them by
    a relationship. **If the change set has any accepted `breaking` or `conflict` op, review in full
    anyway.** Put the scope you actually used in the review's Scope row.

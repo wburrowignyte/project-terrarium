@@ -49,6 +49,8 @@ whether an active rule's Affects lists it, or a `global` rule covers it. The con
      (3–7 groups of 2–8 tables; give groups with the most cross-group relationships adjacent
      orders; keep a Core table's dedicated children in its group).
    - Model many-to-many relationships as junction entities.
+   - A `lucid-diagram` source is an edit by the project team in the shared Lucid diagram. Weigh it like a vendor design decision:
+     it outranks speculation, but DHS/state stakeholder statements win a conflict.
    - Prefer decisions stated by DHS stakeholders over vendor speculation. When speakers disagree,
      model the latest stated decision and raise an open question citing both sides.
    - Add `id` and the audit fields on transactional entities, citing `CONVENTION`.

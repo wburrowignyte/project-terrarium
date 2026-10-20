@@ -1,0 +1,1874 @@
+{
+  "format": 1,
+  "document": {
+    "id": "doc-1",
+    "url": "https://lucid.app/lucidchart/doc-1/edit",
+    "title": "Test",
+    "page": 1
+  },
+  "lastPush": {
+    "at": "2026-10-20T12:00:00Z",
+    "erdVersion": 1
+  },
+  "lastPull": {
+    "at": null,
+    "sourceId": null
+  },
+  "ids": {},
+  "baseline": {
+    "entities": [
+      {
+        "id": "E-1",
+        "table": "CCA_HOUSEHOLD",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "The family unit applying for assistance (one per application)",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "COUNTY_ID",
+            "field": "countyId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-2",
+        "table": "CCA_HOUSEHOLD_MEMBER",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "A person in the household; the applicant is a member",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "HOUSEHOLD_ID",
+            "field": "householdId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "FULL_NAME",
+            "field": "fullName",
+            "type": "Text(100)",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "DATE_OF_BIRTH",
+            "field": "dateOfBirth",
+            "type": "Date",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "RELATIONSHIP_TO_APPLICANT",
+            "field": "relationshipToApplicant",
+            "type": "Text(30)",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "IS_APPLICANT",
+            "field": "isApplicant",
+            "type": "Boolean",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "SSN",
+            "field": "ssn",
+            "type": "Text(11)",
+            "req": false,
+            "key": []
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-3",
+        "table": "CCA_APPLICATION",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "A request for assistance submitted by a household",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "HOUSEHOLD_ID",
+            "field": "householdId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "COUNTY_ID",
+            "field": "countyId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "ASSIGNED_WORKER_ID",
+            "field": "assignedWorkerId",
+            "type": "User",
+            "req": false,
+            "key": []
+          },
+          {
+            "column": "APPLICATION_STATUS_ID",
+            "field": "applicationStatusId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "SUBMITTED_DATE",
+            "field": "submittedDate",
+            "type": "Date",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-4",
+        "table": "CCA_APPLICATION_STATUS",
+        "kind": "Reference",
+        "group": "CCA Household",
+        "sensitivity": "None",
+        "purpose": "Application lifecycle statuses",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "NAME",
+            "field": "name",
+            "type": "Text(30)",
+            "req": true,
+            "key": [
+              "UK"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "E-5",
+        "table": "CCA_INCOME",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "Monthly income of a household member by source",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "HOUSEHOLD_MEMBER_ID",
+            "field": "householdMemberId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "INCOME_SOURCE_TYPE_ID",
+            "field": "incomeSourceTypeId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "MONTHLY_AMOUNT",
+            "field": "monthlyAmount",
+            "type": "Decimal",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "VERIFICATION_DOCUMENT",
+            "field": "verificationDocument",
+            "type": "Document",
+            "req": false,
+            "key": []
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-6",
+        "table": "CCA_INCOME_SOURCE_TYPE",
+        "kind": "Reference",
+        "group": "CCA Household",
+        "sensitivity": "None",
+        "purpose": "Categories of income",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "NAME",
+            "field": "name",
+            "type": "Text(30)",
+            "req": true,
+            "key": [
+              "UK"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "E-7",
+        "table": "CCA_CASE",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "An approved, ongoing assistance authorization for a household",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "APPLICATION_ID",
+            "field": "applicationId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "HOUSEHOLD_ID",
+            "field": "householdId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "COUNTY_ID",
+            "field": "countyId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "CASE_NUMBER",
+            "field": "caseNumber",
+            "type": "Text(20)",
+            "req": true,
+            "key": [
+              "UK"
+            ]
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-8",
+        "table": "CCA_CHILD",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "A household member for whom care is requested",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "CASE_ID",
+            "field": "caseId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "HOUSEHOLD_MEMBER_ID",
+            "field": "householdMemberId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-9",
+        "table": "CCA_PROVIDER",
+        "kind": "Core",
+        "group": "CCA Provider",
+        "sensitivity": "PII",
+        "purpose": "A child care provider. A provider serves many children",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "NAME",
+            "field": "name",
+            "type": "Text(100)",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "LICENSE_NUMBER",
+            "field": "licenseNumber",
+            "type": "Text(20)",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "PROVIDER_LICENSE_TYPE_ID",
+            "field": "providerLicenseTypeId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "ADDRESS",
+            "field": "address",
+            "type": "Text(200)",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "COUNTY_ID",
+            "field": "countyId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-10",
+        "table": "CCA_PROVIDER_LICENSE_TYPE",
+        "kind": "Reference",
+        "group": "CCA Provider",
+        "sensitivity": "None",
+        "purpose": "Provider license types",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "NAME",
+            "field": "name",
+            "type": "Text(40)",
+            "req": true,
+            "key": [
+              "UK"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "E-11",
+        "table": "CCA_AUTHORIZATION",
+        "kind": "Core",
+        "group": "CCA Provider",
+        "sensitivity": "PII",
+        "purpose": "Approval for a child to receive care from a provider for a date range and weekly hours. A child may hold concurrent authorizations with several providers",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "CHILD_ID",
+            "field": "childId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "PROVIDER_ID",
+            "field": "providerId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "START_DATE",
+            "field": "startDate",
+            "type": "Date",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "END_DATE",
+            "field": "endDate",
+            "type": "Date",
+            "req": false,
+            "key": []
+          },
+          {
+            "column": "AUTHORIZED_HOURS_PER_WEEK",
+            "field": "authorizedHoursPerWeek",
+            "type": "Integer",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-12",
+        "table": "CCA_AUTHORIZATION_HISTORY",
+        "kind": "History/Audit",
+        "group": "CCA Provider",
+        "sensitivity": "PII",
+        "purpose": "Prior versions of an authorization, kept for auditors",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "AUTHORIZATION_ID",
+            "field": "authorizationId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "VERSION_NUMBER",
+            "field": "versionNumber",
+            "type": "Integer",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "START_DATE",
+            "field": "startDate",
+            "type": "Date",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "END_DATE",
+            "field": "endDate",
+            "type": "Date",
+            "req": false,
+            "key": []
+          },
+          {
+            "column": "AUTHORIZED_HOURS_PER_WEEK",
+            "field": "authorizedHoursPerWeek",
+            "type": "Integer",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-13",
+        "table": "CCA_CASE_NOTE",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "Free-text note a worker writes on a case; notes can be several pages",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "CASE_ID",
+            "field": "caseId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "NOTE_TEXT",
+            "field": "noteText",
+            "type": "Extra Long Text",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "AUTHOR_ID",
+            "field": "authorId",
+            "type": "User",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-14",
+        "table": "CCA_COUNTY",
+        "kind": "Reference",
+        "group": "Shared reference",
+        "sensitivity": "None",
+        "purpose": "Administering counties; workers see only their county",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "NAME",
+            "field": "name",
+            "type": "Text(50)",
+            "req": true,
+            "key": [
+              "UK"
+            ]
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "id": "R-1",
+        "from": "E-3",
+        "to": "E-1",
+        "fk": "HOUSEHOLD_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-2",
+        "from": "E-2",
+        "to": "E-1",
+        "fk": "HOUSEHOLD_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-3",
+        "from": "E-5",
+        "to": "E-2",
+        "fk": "HOUSEHOLD_MEMBER_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-4",
+        "from": "E-5",
+        "to": "E-6",
+        "fk": "INCOME_SOURCE_TYPE_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-5",
+        "from": "E-3",
+        "to": "E-4",
+        "fk": "APPLICATION_STATUS_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-6",
+        "from": "E-7",
+        "to": "E-3",
+        "fk": "APPLICATION_ID",
+        "pk": "ID",
+        "cardinality": "one-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-7",
+        "from": "E-8",
+        "to": "E-7",
+        "fk": "CASE_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-8",
+        "from": "E-11",
+        "to": "E-8",
+        "fk": "CHILD_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-9",
+        "from": "E-11",
+        "to": "E-9",
+        "fk": "PROVIDER_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-10",
+        "from": "E-12",
+        "to": "E-11",
+        "fk": "AUTHORIZATION_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-11",
+        "from": "E-13",
+        "to": "E-7",
+        "fk": "CASE_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-12",
+        "from": "E-9",
+        "to": "E-10",
+        "fk": "PROVIDER_LICENSE_TYPE_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-13",
+        "from": "E-1",
+        "to": "E-14",
+        "fk": "COUNTY_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-14",
+        "from": "E-3",
+        "to": "E-14",
+        "fk": "COUNTY_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-15",
+        "from": "E-7",
+        "to": "E-1",
+        "fk": "HOUSEHOLD_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-16",
+        "from": "E-7",
+        "to": "E-14",
+        "fk": "COUNTY_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-17",
+        "from": "E-8",
+        "to": "E-2",
+        "fk": "HOUSEHOLD_MEMBER_ID",
+        "pk": "ID",
+        "cardinality": "one-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-18",
+        "from": "E-9",
+        "to": "E-14",
+        "fk": "COUNTY_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      }
+    ]
+  },
+  "seen": {
+    "entities": [
+      {
+        "id": "E-1",
+        "table": "CCA_HOUSEHOLD",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "The family unit applying for assistance (one per application)",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "COUNTY_ID",
+            "field": "countyId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-2",
+        "table": "CCA_HOUSEHOLD_MEMBER",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "A person in the household; the applicant is a member",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "HOUSEHOLD_ID",
+            "field": "householdId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "FULL_NAME",
+            "field": "fullName",
+            "type": "Text(100)",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "DATE_OF_BIRTH",
+            "field": "dateOfBirth",
+            "type": "Date",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "RELATIONSHIP_TO_APPLICANT",
+            "field": "relationshipToApplicant",
+            "type": "Text(30)",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "IS_APPLICANT",
+            "field": "isApplicant",
+            "type": "Boolean",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "SSN",
+            "field": "ssn",
+            "type": "Text(11)",
+            "req": false,
+            "key": []
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-3",
+        "table": "CCA_APPLICATION",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "A request for assistance submitted by a household",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "HOUSEHOLD_ID",
+            "field": "householdId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "COUNTY_ID",
+            "field": "countyId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "ASSIGNED_WORKER_ID",
+            "field": "assignedWorkerId",
+            "type": "User",
+            "req": false,
+            "key": []
+          },
+          {
+            "column": "APPLICATION_STATUS_ID",
+            "field": "applicationStatusId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "SUBMITTED_DATE",
+            "field": "submittedDate",
+            "type": "Date",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-4",
+        "table": "CCA_APPLICATION_STATUS",
+        "kind": "Reference",
+        "group": "CCA Household",
+        "sensitivity": "None",
+        "purpose": "Application lifecycle statuses",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "NAME",
+            "field": "name",
+            "type": "Text(30)",
+            "req": true,
+            "key": [
+              "UK"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "E-5",
+        "table": "CCA_INCOME",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "Monthly income of a household member by source",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "HOUSEHOLD_MEMBER_ID",
+            "field": "householdMemberId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "INCOME_SOURCE_TYPE_ID",
+            "field": "incomeSourceTypeId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "MONTHLY_AMOUNT",
+            "field": "monthlyAmount",
+            "type": "Decimal",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "VERIFICATION_DOCUMENT",
+            "field": "verificationDocument",
+            "type": "Document",
+            "req": false,
+            "key": []
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-6",
+        "table": "CCA_INCOME_SOURCE_TYPE",
+        "kind": "Reference",
+        "group": "CCA Household",
+        "sensitivity": "None",
+        "purpose": "Categories of income",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "NAME",
+            "field": "name",
+            "type": "Text(30)",
+            "req": true,
+            "key": [
+              "UK"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "E-7",
+        "table": "CCA_CASE",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "An approved, ongoing assistance authorization for a household",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "APPLICATION_ID",
+            "field": "applicationId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "HOUSEHOLD_ID",
+            "field": "householdId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "COUNTY_ID",
+            "field": "countyId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "CASE_NUMBER",
+            "field": "caseNumber",
+            "type": "Text(20)",
+            "req": true,
+            "key": [
+              "UK"
+            ]
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-8",
+        "table": "CCA_CHILD",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "A household member for whom care is requested",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "CASE_ID",
+            "field": "caseId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "HOUSEHOLD_MEMBER_ID",
+            "field": "householdMemberId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-9",
+        "table": "CCA_PROVIDER",
+        "kind": "Core",
+        "group": "CCA Provider",
+        "sensitivity": "PII",
+        "purpose": "A child care provider. A provider serves many children",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "NAME",
+            "field": "name",
+            "type": "Text(100)",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "LICENSE_NUMBER",
+            "field": "licenseNumber",
+            "type": "Text(20)",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "PROVIDER_LICENSE_TYPE_ID",
+            "field": "providerLicenseTypeId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "ADDRESS",
+            "field": "address",
+            "type": "Text(200)",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "COUNTY_ID",
+            "field": "countyId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-10",
+        "table": "CCA_PROVIDER_LICENSE_TYPE",
+        "kind": "Reference",
+        "group": "CCA Provider",
+        "sensitivity": "None",
+        "purpose": "Provider license types",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "NAME",
+            "field": "name",
+            "type": "Text(40)",
+            "req": true,
+            "key": [
+              "UK"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "E-11",
+        "table": "CCA_AUTHORIZATION",
+        "kind": "Core",
+        "group": "CCA Provider",
+        "sensitivity": "PII",
+        "purpose": "Approval for a child to receive care from a provider for a date range and weekly hours. A child may hold concurrent authorizations with several providers",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "CHILD_ID",
+            "field": "childId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "PROVIDER_ID",
+            "field": "providerId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "START_DATE",
+            "field": "startDate",
+            "type": "Date",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "END_DATE",
+            "field": "endDate",
+            "type": "Date",
+            "req": false,
+            "key": []
+          },
+          {
+            "column": "AUTHORIZED_HOURS_PER_WEEK",
+            "field": "authorizedHoursPerWeek",
+            "type": "Integer",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-12",
+        "table": "CCA_AUTHORIZATION_HISTORY",
+        "kind": "History/Audit",
+        "group": "CCA Provider",
+        "sensitivity": "PII",
+        "purpose": "Prior versions of an authorization, kept for auditors",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "AUTHORIZATION_ID",
+            "field": "authorizationId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "VERSION_NUMBER",
+            "field": "versionNumber",
+            "type": "Integer",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "START_DATE",
+            "field": "startDate",
+            "type": "Date",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "END_DATE",
+            "field": "endDate",
+            "type": "Date",
+            "req": false,
+            "key": []
+          },
+          {
+            "column": "AUTHORIZED_HOURS_PER_WEEK",
+            "field": "authorizedHoursPerWeek",
+            "type": "Integer",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-13",
+        "table": "CCA_CASE_NOTE",
+        "kind": "Core",
+        "group": "CCA Household",
+        "sensitivity": "PII",
+        "purpose": "Free-text note a worker writes on a case; notes can be several pages",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "CASE_ID",
+            "field": "caseId",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "FK"
+            ]
+          },
+          {
+            "column": "NOTE_TEXT",
+            "field": "noteText",
+            "type": "Extra Long Text",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "AUTHOR_ID",
+            "field": "authorId",
+            "type": "User",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_AT",
+            "field": "createdAt",
+            "type": "Date and Time",
+            "req": true,
+            "key": []
+          },
+          {
+            "column": "CREATED_BY",
+            "field": "createdBy",
+            "type": "User",
+            "req": true,
+            "key": []
+          }
+        ]
+      },
+      {
+        "id": "E-14",
+        "table": "CCA_COUNTY",
+        "kind": "Reference",
+        "group": "Shared reference",
+        "sensitivity": "None",
+        "purpose": "Administering counties; workers see only their county",
+        "fields": [
+          {
+            "column": "ID",
+            "field": "id",
+            "type": "Integer",
+            "req": true,
+            "key": [
+              "PK"
+            ]
+          },
+          {
+            "column": "NAME",
+            "field": "name",
+            "type": "Text(50)",
+            "req": true,
+            "key": [
+              "UK"
+            ]
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "id": "R-1",
+        "from": "E-3",
+        "to": "E-1",
+        "fk": "HOUSEHOLD_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-2",
+        "from": "E-2",
+        "to": "E-1",
+        "fk": "HOUSEHOLD_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-3",
+        "from": "E-5",
+        "to": "E-2",
+        "fk": "HOUSEHOLD_MEMBER_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-4",
+        "from": "E-5",
+        "to": "E-6",
+        "fk": "INCOME_SOURCE_TYPE_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-5",
+        "from": "E-3",
+        "to": "E-4",
+        "fk": "APPLICATION_STATUS_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-6",
+        "from": "E-7",
+        "to": "E-3",
+        "fk": "APPLICATION_ID",
+        "pk": "ID",
+        "cardinality": "one-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-7",
+        "from": "E-8",
+        "to": "E-7",
+        "fk": "CASE_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-8",
+        "from": "E-11",
+        "to": "E-8",
+        "fk": "CHILD_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-9",
+        "from": "E-11",
+        "to": "E-9",
+        "fk": "PROVIDER_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-10",
+        "from": "E-12",
+        "to": "E-11",
+        "fk": "AUTHORIZATION_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-11",
+        "from": "E-13",
+        "to": "E-7",
+        "fk": "CASE_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-12",
+        "from": "E-9",
+        "to": "E-10",
+        "fk": "PROVIDER_LICENSE_TYPE_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-13",
+        "from": "E-1",
+        "to": "E-14",
+        "fk": "COUNTY_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-14",
+        "from": "E-3",
+        "to": "E-14",
+        "fk": "COUNTY_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-15",
+        "from": "E-7",
+        "to": "E-1",
+        "fk": "HOUSEHOLD_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-16",
+        "from": "E-7",
+        "to": "E-14",
+        "fk": "COUNTY_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-17",
+        "from": "E-8",
+        "to": "E-2",
+        "fk": "HOUSEHOLD_MEMBER_ID",
+        "pk": "ID",
+        "cardinality": "one-to-one",
+        "fkReq": true
+      },
+      {
+        "id": "R-18",
+        "from": "E-9",
+        "to": "E-14",
+        "fk": "COUNTY_ID",
+        "pk": "ID",
+        "cardinality": "many-to-one",
+        "fkReq": true
+      }
+    ]
+  }
+}
