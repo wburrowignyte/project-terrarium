@@ -357,6 +357,20 @@ Lucid itself isn't mocked beyond the snapshot JSON. The live check is §9.
 
 ### Spike
 
+Run 2026-10-20 in `project-terrarium sync test (delete me)` (root folder, user-approved). Every answer below was measured, not assumed.
+
+| # | Answer |
+|---|---|
+| S1 | **Empty doc:** `lucid_create_erd` with one placeholder entity (`SEED`), then delete it from a script (`basecanvasediting.deleteItem`). Simpler than a diagram-specification text block and needs no `lucid://skills/diagram-specification` read. `erds.createSchema` also works (positions honoured, `entityIdsByKey` returned), but the tool uses `erds.create` per entity instead (see Decisions): it is idempotent per `ERD_ID` and stamps shape data in the same call. |
+| S2 | **Yes.** `formulas.addShapeDataField` works on relationship lines (`lineId`), and the value survives `updateRelationship` (cardinality and label edits). Relationships are identified by `ERD_ID = R-n`, with the (parent, child, FK column) signature as the fallback for lines without one. |
+| S3 | Entity shape data **survives** `addField`, `moveField`, rename through `erds.update`. **Copy/paste duplicates the data**: `copyPasteItems` produced a second ERD entity carrying `ERD_ID = E-1`, so duplicate detection is required (§6b rule implemented: the shape that best matches the baseline keeps the id, the rest are new tables). |
+| S4 | 10 entities ×15 fields + 9 lines: 0.85 s. 25 + 24: 1.4 s. 50 + 49: 2.4 s (`createSchema`), stamping 50 entities 21 ms, reading 50 entities 17 ms. Roughly 45 ms per entity, so the 25 s limit is nowhere near at 40 ops per batch; the default batch is **40 ops** (about 2 s, a >10x margin). No source-size limit was hit (a 16 KB script ran). A full snapshot of ~50 entities takes <100 ms, so the snapshot script needs no paging. |
+| S5 | `wrapInContainer({className: 'SparkFrameBlock', label})` works. Entities inside the frame stay readable by `erds.list/read`, and relationships and shape data are unaffected. The frame is stamped with `ERD_ID = F:<group>` so later pushes find it. |
+| S6 | A row a person adds with empty Key/Type reads `{key: '', type: '', nullable: true}`. A line drawn to the header reports `fieldIndex: 0` with no `fieldName` (cardinality defaults to `one`/`many`). Header lines are listed under *Not proposed*; rows with an empty name are ignored. |
+| S7 | `lucid_get_document_metadata` (and the create response) return `version` (integer, bumps on every edit) and `lastModified`. Ledger fingerprint: `lucid:<lastModified>`. |
+
+Other things the spike found: ERD entities size themselves from `columnWidths`; measured height is about 33 px header + 35.5 px per row, and about 10 px per character of text, so the tool sets generous column widths so no cell wraps. `basecanvasediting.rerouteLines` tidies the lines a lot and is run on every push for the lines it touched.
+
 ### Commits
 
 ### Decisions and deviations
